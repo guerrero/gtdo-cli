@@ -1,0 +1,1 @@
+/Users/alex/.paseo/worktrees/0p6wioba/feat-gtdo-migracion-todotxt/docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.md
