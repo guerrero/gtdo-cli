@@ -3,7 +3,7 @@
 # todo.sh's actionUsage greps its actionsHelp text for the block of the
 # requested action; gtdo renders the same blocks from the registered
 # commands (§6.4). The error message and exit code are the parity
-# contract; the block texts are gtdo's own (no add-on references).
+# contract; the block texts are gtdo's own.
 
 # Nonexisting action: error on stderr, exit 1, nothing on stdout.
 ! exec gtdo help doesnotexist

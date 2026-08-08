@@ -4,7 +4,7 @@
 # the section headers (and sed '/^ \{0,2\}[A-Z]/!d' for the config-error
 # sessions). gtdo's shorthelp is its own text (§6.4): it has no
 # "Actions can be added and overridden using scripts in the actions
-# directory." line — gtdo has no add-ons (§2).
+# directory." line — out of scope (§2).
 #
 # Out of scope: the custom-action sessions (make_action foo) and the
 # fatal-error sessions. todo.sh dies when no config file exists, even for

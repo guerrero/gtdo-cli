@@ -5,8 +5,8 @@
 # header order is Usage / Options / Environment variables (-vv only) /
 # Built-in Actions. gtdo's help texts are its own (§6.4) and help.txtar
 # pins the plain help byte for byte; this port pins the -v/-vv variations
-# and the section headers. The addon session (custom action) is out of
-# scope: gtdo has no addons (§2).
+# and the section headers. The custom-action session is out of
+# scope (§2).
 
 exec gtdo help
 stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'

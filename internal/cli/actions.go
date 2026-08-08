@@ -27,7 +27,8 @@ import (
 )
 
 // registerActions adds the §6.3 actions to root. The description texts
-// follow todo.sh's actionsHelp output (minus the add-on references).
+// follow todo.sh's actionsHelp output (minus the out-of-scope
+// references).
 func registerActions(root *cobra.Command, cfg *config.Config) {
 	add := func(spec actionSpec) { root.AddCommand(newAction(spec, cfg)) }
 	add(actionSpec{

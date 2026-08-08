@@ -11,7 +11,7 @@ import (
 
 // The one-line descriptions of the two always-registered actions. Both are
 // used as the shorthelp list line and as the help block text. todo.sh's
-// equivalents mention add-ons; gtdo has none.
+// equivalents describe functionality out of gtdo's scope; gtdo has none.
 const (
 	shorthelpText = "List the one-line usage of all built-in actions."
 	helpText      = "Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s)."
@@ -65,7 +65,7 @@ const optionsHelp = `  Options:
 // help (-vv): the "additional help text" the -vv option line promises.
 // It lists gtdo's own env vars (§5.2 of the design plan) in the shape of
 // todo.sh's section, with gtdo's own wording. There is deliberately no
-// addon or TODOTXT_* var that gtdo does not implement (§2): gtdo's
+// TODOTXT_* var that gtdo does not implement (§2): gtdo's
 // config file env var is GTDO_CONFIG, listed under -d in optionsHelp.
 // The name column is padded to 31 characters, then two spaces.
 const envVarsHelp = `  Environment variables:
