@@ -1,5 +1,6 @@
 /gtdo
 /dist/
+/completions/
 *.test
 coverage.out
 .DS_Store

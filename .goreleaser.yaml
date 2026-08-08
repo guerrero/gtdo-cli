@@ -5,6 +5,7 @@ project_name: gtdo
 before:
   hooks:
     - go mod tidy
+    - make completions
 
 builds:
   - id: gtdo

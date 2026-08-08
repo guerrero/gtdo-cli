@@ -11,7 +11,7 @@ LDFLAGS := -s -w \
 
 export CGO_ENABLED := 0
 
-.PHONY: build test lint man install release release-dry clean
+.PHONY: build test lint man install release release-dry completions clean
 
 build:
 	go build -trimpath -ldflags '$(LDFLAGS)' -o $(BINARY) ./cmd/gtdo
@@ -24,6 +24,13 @@ lint:
 
 man:
 	go run ./tools/genman
+
+# Shell completion scripts for the release archives (goreleaser's
+# before.hooks run this; the archive files list picks up completions/*).
+completions:
+	mkdir -p completions
+	go run ./cmd/gtdo completion bash > completions/gtdo.bash
+	go run ./cmd/gtdo completion fish > completions/gtdo.fish
 
 install:
 	go install -trimpath -ldflags '$(LDFLAGS)' ./cmd/gtdo
@@ -42,4 +49,4 @@ release:
 
 clean:
 	rm -f $(BINARY) coverage.out
-	rm -rf dist/
+	rm -rf dist/ completions/
