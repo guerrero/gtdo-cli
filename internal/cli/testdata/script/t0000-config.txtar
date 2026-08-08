@@ -53,6 +53,10 @@ exec gtdo -d alt.toml
 cmp stdout list.want
 
 # Config file (env variable): GTDO_CONFIG beats the default location.
+# The default-location file is removed first (the shell test does the
+# same with `rm -rf .todo`), so this run can only find env.toml — the
+# listing proves the env-var lookup actually fired.
+rm .config/gtdo/config.toml
 env GTDO_CONFIG=env.toml
 cp test.toml env.toml
 exec gtdo
