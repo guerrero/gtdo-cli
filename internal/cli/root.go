@@ -55,9 +55,9 @@ func NewRootCmd(cfg *config.Config) *cobra.Command {
 		use:   "help [ACTION...]",
 		short: helpText,
 		long:  helpText,
-		run: func(cmd *cobra.Command, args []string, _ *config.Config) error {
+		run: func(cmd *cobra.Command, args []string, cfg *config.Config) error {
 			if len(args) == 0 {
-				fmt.Fprint(cmd.OutOrStdout(), HelpString(root))
+				fmt.Fprint(cmd.OutOrStdout(), HelpString(root, cfg))
 				return nil
 			}
 			for _, name := range args {

@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/guerrero/gtdo/internal/config"
 )
 
 // The one-line descriptions of the two always-registered actions. Both are
@@ -57,15 +59,48 @@ const optionsHelp = `  Options:
     -x
         No-op; accepted for compatibility with todo.txt-cli
 
-  Built-in Actions:
 `
 
+// envVarsHelp is the Environment variables section of the extra-verbose
+// help (-vv): the "additional help text" the -vv option line promises.
+// It lists gtdo's own env vars (§5.2 of the design plan) in the shape of
+// todo.sh's section, with gtdo's own wording. There is deliberately no
+// addon or TODOTXT_* var that gtdo does not implement (§2): gtdo's
+// config file env var is GTDO_CONFIG, listed under -d in optionsHelp.
+// The name column is padded to 31 characters, then two spaces.
+const envVarsHelp = `  Environment variables:
+    TODO_DIR                         path to the directory that holds the todo files
+    TODO_FILE                        path to the todo.txt file
+    DONE_FILE                        path to the done.txt file
+    REPORT_FILE                      path to the report.txt file
+    TODOTXT_AUTO_ARCHIVE             is same as option -a (0)/-A (1)
+    TODOTXT_FORCE=1                  is same as option -f
+    TODOTXT_PRESERVE_LINE_NUMBERS    is same as option -n (0)/-N (1)
+    TODOTXT_PLAIN                    is same as option -p (1)/-c (0)
+    TODOTXT_DATE_ON_ADD              is same as option -t (1)/-T (0)
+    TODOTXT_PRIORITY_ON_ADD=pri      default priority A-Z
+    TODOTXT_VERBOSE=1                is same as option -v
+    TODOTXT_DEFAULT_ACTION=""        run this when called with no arguments
+    TODOTXT_SOURCEVAR=$DONE_FILE     use another source for listcon, listproj
+    SENTENCE_DELIMITERS=,.:;         suppress the added space in append
+`
+
+// builtinActionsHeader closes the options (and optional environment
+// variables) part of the help; the per-action blocks follow it.
+const builtinActionsHeader = "  Built-in Actions:\n"
+
 // HelpString renders gtdo's full help (§6.4): the usage line, the options,
+// the environment-variables section when verbosity is 2+ (the -vv option
+// line promises it; todo.sh gates the same section on TODOTXT_VERBOSE > 1),
 // and the per-action block of every registered command, in that order.
-func HelpString(root *cobra.Command) string {
+func HelpString(root *cobra.Command, cfg *config.Config) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "  Usage: %s\n\n", onelineUsage())
 	b.WriteString(optionsHelp)
+	if cfg.Verbose > 1 {
+		b.WriteString(envVarsHelp)
+	}
+	b.WriteString(builtinActionsHeader)
 	for _, cmd := range actionCommands(root) {
 		b.WriteString(actionBlock(cmd, cmd.Name()))
 		b.WriteString("\n\n")

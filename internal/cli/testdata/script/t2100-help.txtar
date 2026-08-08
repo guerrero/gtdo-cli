@@ -1,0 +1,188 @@
+# Port of t2100-help.sh: help output.
+#
+# The shell test filters the output with sed '/^  [A-Z]/!d' to check only
+# the section headers, so that documentation edits do not break it; the
+# header order is Usage / Options / Environment variables (-vv only) /
+# Built-in Actions. gtdo's help texts are its own (§6.4) and help.txtar
+# pins the plain help byte for byte; this port pins the -v/-vv variations
+# and the section headers. The addon session (custom action) is out of
+# scope: gtdo has no addons (§2).
+
+exec gtdo help
+stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Options:$'
+stdout '^  Built-in Actions:$'
+
+# -v help is the same text as plain help: the environment section needs
+# TODOTXT_VERBOSE > 1, exactly like todo.sh's `[ "$TODOTXT_VERBOSE" -gt 1 ]`.
+exec gtdo -v help
+stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Options:$'
+stdout '^  Built-in Actions:$'
+! stdout 'Environment variables:'
+
+# -vv help: the Options section's -vv line promises "additional help
+# text"; that text is the Environment variables section, listing gtdo's
+# own env vars (§5.2) between Options and Built-in Actions.
+exec gtdo -vv help
+cmp stdout help-vv.want
+
+-- help-vv.want --
+  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+
+  Options:
+    -@
+        Hide context names in list output.  Use twice to show context names (default).
+    -+
+        Hide project names in list output.  Use twice to show project names (default).
+    -c
+        Color mode
+    -d CONFIG_FILE
+        Use a configuration file other than one of the defaults
+    -f
+        Forces actions without confirmation or interactive input
+    -h
+        Display a short help message; same as action "shorthelp"
+    -p
+        Plain mode turns off colors
+    -P
+        Hide priority labels in list output.  Use twice to show priority labels (default).
+    -a
+        Don't auto-archive tasks automatically on completion
+    -A
+        Auto-archive tasks automatically on completion
+    -n
+        Don't preserve line numbers; automatically remove blank lines on task deletion
+    -N
+        Preserve line numbers
+    -t
+        Prepend the current date to a task automatically when it's added.
+    -T
+        Do not prepend the current date to a task automatically when it's added.
+    -v
+        Verbose mode turns on confirmation messages
+    -vv
+        Extra verbose mode prints some debugging information and additional help text
+    -V
+        Displays version and build information
+    -x
+        No-op; accepted for compatibility with todo.txt-cli
+
+  Environment variables:
+    TODO_DIR                         path to the directory that holds the todo files
+    TODO_FILE                        path to the todo.txt file
+    DONE_FILE                        path to the done.txt file
+    REPORT_FILE                      path to the report.txt file
+    TODOTXT_AUTO_ARCHIVE             is same as option -a (0)/-A (1)
+    TODOTXT_FORCE=1                  is same as option -f
+    TODOTXT_PRESERVE_LINE_NUMBERS    is same as option -n (0)/-N (1)
+    TODOTXT_PLAIN                    is same as option -p (1)/-c (0)
+    TODOTXT_DATE_ON_ADD              is same as option -t (1)/-T (0)
+    TODOTXT_PRIORITY_ON_ADD=pri      default priority A-Z
+    TODOTXT_VERBOSE=1                is same as option -v
+    TODOTXT_DEFAULT_ACTION=""        run this when called with no arguments
+    TODOTXT_SOURCEVAR=$DONE_FILE     use another source for listcon, listproj
+    SENTENCE_DELIMITERS=,.:;         suppress the added space in append
+  Built-in Actions:
+    add "THING I NEED TO DO +project @context"
+    a "THING I NEED TO DO +project @context"
+      Adds THING I NEED TO DO to your todo.txt file on its own line.
+      Project and context notation optional.
+      Quotes optional.
+
+    addm "THINGS I NEED TO DO"
+      Adds each line of THINGS I NEED TO DO to your todo.txt on its own line.
+      Project and context notation optional.
+
+    addto DEST "TEXT TO ADD"
+      Adds a line of text to any file located in the todo.txt directory.
+      For example, addto inbox.txt "decide about vacation"
+
+    append NR "TEXT TO APPEND"
+    app NR "TEXT TO APPEND"
+      Adds TEXT TO APPEND to the end of the task on line NR.
+      Quotes optional.
+
+    archive
+      Moves all done tasks from todo.txt to done.txt and removes blank lines.
+
+    del NR [TERM]
+    rm NR [TERM]
+      Deletes the task on line NR in todo.txt.
+      If TERM specified, deletes only TERM from the task.
+
+    depri NR [NR ...]
+    dp NR [NR ...]
+      Deprioritizes (removes the priority) from the task(s) on line NR in todo.txt.
+
+    do NR [NR ...]
+    done NR [NR ...]
+      Marks task(s) on line NR as done in todo.txt.
+
+    help [ACTION...]
+      Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+
+    list [TERM...]
+    ls [TERM...]
+      Displays all tasks that contain TERM(s) sorted by priority with line
+      numbers.  Each task must match all TERM(s) (logical AND); to display
+      tasks that contain any TERM (logical OR), use 'TERM1\|TERM2' (quoted).
+      Hides all tasks that contain TERM(s) preceded by a
+      minus sign (i.e. -TERM).
+      TERM(s) are grep-style basic regular expressions.
+      If no TERM specified, lists entire todo.txt.
+
+    listall [TERM...]
+    lsa [TERM...]
+      Displays all the lines in todo.txt AND done.txt that contain TERM(s)
+      sorted by priority with line numbers.  Hides all tasks that
+      contain TERM(s) preceded by a minus sign (i.e. -TERM).  If no
+      TERM specified, lists entire todo.txt AND done.txt
+      concatenated and sorted.
+
+    listcon [TERM...]
+    lsc [TERM...]
+      Lists all the task contexts that start with the @ sign in todo.txt.
+      If TERM specified, considers only tasks that contain TERM(s).
+
+    listpri [PRIORITIES] [TERM...]
+    lsp [PRIORITIES] [TERM...]
+      Displays all tasks prioritized PRIORITIES.
+      PRIORITIES can be a [concatenation of] single (A) or range (A-C).
+      If no PRIORITIES specified, lists all prioritized tasks.
+      If TERM specified, lists only prioritized tasks that contain TERM(s).
+      Hides all tasks that contain TERM(s) preceded by a minus sign
+      (i.e. -TERM).
+
+    listproj [TERM...]
+    lsprj [TERM...]
+      Lists all the projects (terms that start with a + sign) in
+      todo.txt.
+      If TERM specified, considers only tasks that contain TERM(s).
+
+    move NR DEST [SRC]
+    mv NR DEST [SRC]
+      Moves the line NR from source text file (SRC) to destination text file (DEST).
+      Both source and destination file must be located in the directory defined in the
+      configuration directory.  When SRC is not defined it's by default todo.txt.
+
+    prepend NR "TEXT TO PREPEND"
+    prep NR "TEXT TO PREPEND"
+      Adds TEXT TO PREPEND to the beginning of the task on line NR.
+      Quotes optional.
+
+    pri NR PRIORITY [NR PRIORITY ...]
+    p NR PRIORITY [NR PRIORITY ...]
+      Adds PRIORITY to task on line NR.  If the task is already prioritized,
+      replaces current priority with new PRIORITY.
+      PRIORITY must be a letter between A and Z.
+
+    replace NR "UPDATED TODO"
+      Replaces task on line NR with UPDATED TODO.
+
+    report
+      Adds the number of open tasks and done tasks to report.txt.
+
+    shorthelp
+      List the one-line usage of all built-in actions.
+
