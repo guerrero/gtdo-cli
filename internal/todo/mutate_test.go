@@ -826,6 +826,24 @@ func TestDelTermNotFound(t *testing.T) {
 	}
 }
 
+// When the term removes the whole text, todo.sh's getNewtodo dies after
+// the seds have run: "No updated task N." with the blanked line left in
+// the file (verified live: del 1 foo on "foo\nbar\n" → "\nbar\n", exit
+// 1). The error carries the exact die text for the CLI to print.
+func TestDelTermEmptyResult(t *testing.T) {
+	s := newTestStore(t, "foo\nbar\n")
+	oldText, newText, err := s.DelTerm(1, "foo")
+	if err == nil || err.Error() != "TODO: No updated task 1." {
+		t.Errorf("DelTerm error = %v, want TODO: No updated task 1.", err)
+	}
+	if oldText != "foo" || newText != "" {
+		t.Errorf("DelTerm = (%q, %q), want (foo, )", oldText, newText)
+	}
+	if got := readFile(t, s.TodoFile); got != "\nbar\n" {
+		t.Errorf("todo.txt = %q, want %q", got, "\nbar\n")
+	}
+}
+
 func TestMove(t *testing.T) {
 	s := newTestStore(t, "(B) smell the uppercase Roses +flowers @outside\n(A) notice the sunflowers\n")
 	writeFile(t, s.DoneFile, "x 2009-02-13 make the coffee +wakeup\nx 2009-02-13 smell the coffee +wakeup\n")

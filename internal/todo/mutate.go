@@ -332,6 +332,13 @@ func (s *Store) DelTerm(item int, term string) (string, string, error) {
 	if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 		return "", "", err
 	}
+	if newText == "" {
+		// The term removed the whole text: todo.sh's getNewtodo dies after
+		// the seds have run, leaving the blanked line in the file (verified
+		// live: del 1 foo on "foo\nbar\n" → "\nbar\n", exit 1). The error
+		// carries the exact die text for the CLI to print.
+		return task.Text, newText, fmt.Errorf("TODO: No updated task %d.", item) //nolint:revive,staticcheck
+	}
 	return task.Text, newText, nil
 }
 
