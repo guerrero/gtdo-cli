@@ -12,9 +12,10 @@ stdout 'Usage: gtdo \[-fhpantvV\]'
 stdout 'Usage: gtdo \[-fhpantvV\]'
 
 # Flags are accepted only before the action; a trailing -p is a positional arg.
-# list is not wired until Task 8, so this is an unknown-action usage error.
-! exec gtdo -p list -p
-stdout 'Usage: gtdo \[-fhpantvV\]'
+# With list wired, `list -p` treats -p as an exclusion term over the empty
+# file: no tasks shown, exit 0.
+exec gtdo -p list -p
+cmp stdout tail-p.want
 
 # -h forwards to shorthelp (exit 0), even with trailing garbage.
 exec gtdo -h bogus
@@ -40,3 +41,7 @@ stdout '^Usage: gtdo \[-fhpantvV\]'
 # An unknown flag inside a cluster is a usage error too.
 ! exec gtdo -pq list
 stdout '^Usage: gtdo \[-fhpantvV\]'
+
+-- tail-p.want --
+--
+TODO: 0 of 0 tasks shown

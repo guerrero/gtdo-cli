@@ -1,5 +1,5 @@
 # Port of t1600-append.sh: append functionality, including the
-# SENTENCE_DELIMITERS config (list parts belong to Task 8).
+# SENTENCE_DELIMITERS config and the list sessions.
 
 # the shell test seeds todo.txt with `todo.sh add notice the daisies > /dev/null`
 cp daisies.txt todo.txt
@@ -13,8 +13,14 @@ cmp stderr notask.want
 exec gtdo append 1 'smell the roses'
 cmp stdout a1.want
 
+exec gtdo list
+cmp stdout alist1.want
+
 exec gtdo append 1 'see the wasps & bees'
 cmp stdout a2.want
+
+exec gtdo list
+cmp stdout alist2.want
 
 cp hay.txt todo.txt
 exec gtdo append 1 'and notice the   three   spaces'
@@ -24,8 +30,11 @@ cp four.txt todo.txt
 exec gtdo append 1 '~@#$%^&*()-_=+[{]}|;:''',<.>/?
 cmp stdout a4.want
 
-exec gtdo append 2 '`!\\"'
+exec gtdo append 2 '\`!\\"'
 cmp stdout a5.want
+
+exec gtdo list
+cmp stdout alist3.want
 
 # append of current sentence: no space before delimiters , ; and &
 cp daisies.txt todo.txt
@@ -74,7 +83,22 @@ sentence_delimiters = "*,.:;&"
 -- a4.want --
 1 smell the cows ~@#$%^&*()-_=+[{]}|;:',<.>/?
 -- a5.want --
-2 grow some corn `!\\"
+2 grow some corn \`!\\"
+-- alist1.want --
+1 notice the daisies smell the roses
+--
+TODO: 1 of 1 tasks shown
+-- alist2.want --
+1 notice the daisies smell the roses see the wasps & bees
+--
+TODO: 1 of 1 tasks shown
+-- alist3.want --
+4 chase the chickens
+2 grow some corn \`!\\"
+1 smell the cows ~@#$%^&*()-_=+[{]}|;:',<.>/?
+3 thrash some hay
+--
+TODO: 4 of 4 tasks shown
 -- a6.want --
 1 notice the daisies, lilies and roses
 -- a7.want --

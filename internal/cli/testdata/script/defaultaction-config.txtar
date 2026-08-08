@@ -23,6 +23,11 @@ default_action = "shorthelp"
     depri  Remove the priority from the task(s) on line NR.
     do  Mark task(s) on line NR as done.
     help  Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+    list  Display all tasks in todo.txt.
+    listall  Display all the lines in todo.txt AND done.txt.
+    listcon  List all the task contexts that start with the @ sign in todo.txt.
+    listpri  Display all tasks prioritized PRIORITIES.
+    listproj  List all the projects (terms that start with a + sign) in todo.txt.
     move  Move a task from one file to another in the todo.txt directory.
     prepend  Prepend text to the task on line NR.
     pri  Add or replace the priority of the task on line NR.

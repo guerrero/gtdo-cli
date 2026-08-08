@@ -1,0 +1,37 @@
+# Port of t2200-no-done-report-files.sh: with DONE_FILE and REPORT_FILE
+# pointing at /dev/null, no done.txt/report.txt files are ever created.
+
+# invoke gtdo (TODO_FILE stays the literal ./todo.txt, like the shell
+# config's "$TODO_DIR/todo.txt")
+env TODO_DIR=. TODO_FILE=./todo.txt DONE_FILE=/dev/null REPORT_FILE=/dev/null
+exec gtdo add notice the daisies
+cmp stdout add.want
+
+exists todo.txt
+! exists done.txt
+! exists report.txt
+
+# perform archive
+exec gtdo -A do 1
+cmp stdout do.want
+
+! exists done.txt
+
+# perform report
+exec gtdo report
+cmp stdout report.want
+
+! exists report.txt
+
+-- add.want --
+1 notice the daisies
+TODO: 1 added.
+-- do.want --
+1 x 2009-02-13 notice the daisies
+TODO: 1 marked as done.
+x 2009-02-13 notice the daisies
+TODO: ./todo.txt archived.
+-- report.want --
+TODO: ./todo.txt does not contain any done tasks.
+2009-02-13T04:40:00 0 0
+TODO: Report file updated.

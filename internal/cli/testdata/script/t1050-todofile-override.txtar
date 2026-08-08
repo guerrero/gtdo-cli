@@ -1,13 +1,25 @@
-# Port of t1050-todofile-override.sh: TODO_FILE and DONE_FILE overrides.
-# The listfile parts belong to Task 8; the done-file state is checked
-# with cat.
+# Port of t1050-todofile-override.sh: TODO_FILE and DONE_FILE overrides,
+# including the list sessions. The listfile parts are out of scope (plan §2).
 
 exec gtdo add notice the daisies
 cmp stdout o1.want
 
+exec gtdo list
+cmp stdout o6.want
+
 env TODO_FILE=$HOME/special.txt
 exec gtdo add smell the roses
 cmp stdout o2.want
+
+# the default todo.txt is unchanged
+env TODO_FILE=
+exec gtdo list
+cmp stdout o6.want
+
+# the override file lists its own tasks with its own prefix
+env TODO_FILE=$HOME/special.txt
+exec gtdo list
+cmp stdout o7.want
 
 env TODO_FILE= DONE_FILE=$HOME/specialdone.txt
 exec gtdo do 1
@@ -39,3 +51,11 @@ TODO: $HOME/special.txt archived.
 -- o5.want --
 x 2009-02-13 notice the daisies
 x 2009-02-13 smell the roses
+-- o6.want --
+1 notice the daisies
+--
+TODO: 1 of 1 tasks shown
+-- o7.want --
+1 smell the roses
+--
+SPECIAL: 1 of 1 tasks shown

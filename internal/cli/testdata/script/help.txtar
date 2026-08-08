@@ -109,6 +109,44 @@ stderr '^TODO: No action "--help" exists\.$'
     help [ACTION...]
       Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
 
+    list [TERM...]
+    ls [TERM...]
+      Displays all tasks that contain TERM(s) sorted by priority with line
+      numbers.  Each task must match all TERM(s) (logical AND); to display
+      tasks that contain any TERM (logical OR), use 'TERM1\|TERM2' (quoted).
+      Hides all tasks that contain TERM(s) preceded by a
+      minus sign (i.e. -TERM).
+      TERM(s) are grep-style basic regular expressions.
+      If no TERM specified, lists entire todo.txt.
+
+    listall [TERM...]
+    lsa [TERM...]
+      Displays all the lines in todo.txt AND done.txt that contain TERM(s)
+      sorted by priority with line numbers.  Hides all tasks that
+      contain TERM(s) preceded by a minus sign (i.e. -TERM).  If no
+      TERM specified, lists entire todo.txt AND done.txt
+      concatenated and sorted.
+
+    listcon [TERM...]
+    lsc [TERM...]
+      Lists all the task contexts that start with the @ sign in todo.txt.
+      If TERM specified, considers only tasks that contain TERM(s).
+
+    listpri [PRIORITIES] [TERM...]
+    lsp [PRIORITIES] [TERM...]
+      Displays all tasks prioritized PRIORITIES.
+      PRIORITIES can be a [concatenation of] single (A) or range (A-C).
+      If no PRIORITIES specified, lists all prioritized tasks.
+      If TERM specified, lists only prioritized tasks that contain TERM(s).
+      Hides all tasks that contain TERM(s) preceded by a minus sign
+      (i.e. -TERM).
+
+    listproj [TERM...]
+    lsprj [TERM...]
+      Lists all the projects (terms that start with a + sign) in
+      todo.txt.
+      If TERM specified, considers only tasks that contain TERM(s).
+
     move NR DEST [SRC]
     mv NR DEST [SRC]
       Moves the line NR from source text file (SRC) to destination text file (DEST).

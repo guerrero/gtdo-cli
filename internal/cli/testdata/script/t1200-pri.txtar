@@ -1,12 +1,21 @@
-# Port of t1200-pri.sh: priority functionality (list parts belong to
-# Task 8).
+# Port of t1200-pri.sh: priority functionality, including the list
+# sessions.
 
 ! exec gtdo pri B B
 cmp stderr usage.want
 
 cp pri3.txt todo.txt
+exec gtdo list
+cmp stdout plist1.want
+
 exec gtdo pri 1 B
 cmp stdout p1.want
+
+exec gtdo list
+cmpenv stdout plist2.want
+
+exec gtdo -p list
+cmp stdout plist3.want
 
 exec gtdo pri 2 C
 cmp stdout p2.want
@@ -61,6 +70,24 @@ TODO: No task 4.
 smell the uppercase Roses +flowers @outside
 notice the sunflowers
 stop
+-- plist1.want --
+2 notice the sunflowers
+1 smell the uppercase Roses +flowers @outside
+3 stop
+--
+TODO: 3 of 3 tasks shown
+-- plist2.want --
+$ESC[0;32m1 (B) smell the uppercase Roses +flowers @outside$ESC[0m
+2 notice the sunflowers
+3 stop
+--
+TODO: 3 of 3 tasks shown
+-- plist3.want --
+1 (B) smell the uppercase Roses +flowers @outside
+2 notice the sunflowers
+3 stop
+--
+TODO: 3 of 3 tasks shown
 -- priabc.txt --
 (B) smell the uppercase Roses +flowers @outside
 (C) notice the sunflowers

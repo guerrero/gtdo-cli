@@ -8,11 +8,12 @@ import (
 
 // Color is a resolved snapshot of todo.cfg's color assignments (§5.2
 // [colors]): the priority colors pri_a..pri_c with the pri_x fallback,
-// color_done, and the per-word colors. Each field holds the final ANSI
-// escape sequence; in plain mode every field is empty, so a zero Color
-// renders uncolored. The codes are resolved by internal/config — the single
-// source of truth for the 16-name color map — and FromConfig copies out the
-// roles the listing pipeline asks for.
+// color_done, the per-word colors, and default (the reset emitted after
+// every colored word). Each field holds the final ANSI escape sequence;
+// in plain mode every field is empty, so a zero Color renders uncolored.
+// The codes are resolved by internal/config — the single source of truth
+// for the 16-name color map — and FromConfig copies out the roles the
+// listing pipeline asks for.
 //
 // Color implements todo.Colorer (§6.2.4): Color returns the field for a
 // palette role ("" for anything else) and PriorityColor maps A/B/C to their
@@ -22,6 +23,7 @@ import (
 type Color struct {
 	PriA, PriB, PriC, PriX                     string
 	Done, Project, Context, Date, Number, Meta string
+	Default                                    string
 }
 
 // FromConfig snapshots the palette roles out of a resolved configuration.
@@ -40,6 +42,7 @@ func FromConfig(cfg config.Config) Color {
 		Date:    cfg.Color("color_date"),
 		Number:  cfg.Color("color_number"),
 		Meta:    cfg.Color("color_meta"),
+		Default: cfg.Color("default"),
 	}
 }
 
@@ -68,6 +71,8 @@ func (p Color) Color(role string) string {
 		return p.Number
 	case "color_meta":
 		return p.Meta
+	case "default":
+		return p.Default
 	}
 	return ""
 }

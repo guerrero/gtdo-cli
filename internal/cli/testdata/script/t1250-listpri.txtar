@@ -1,0 +1,181 @@
+# Port of t1250-listpri.sh: listpri functionality, all sessions in scope.
+
+# basic listpri
+cp pri3.txt todo.txt
+exec gtdo listpri A
+cmp stdout lsp1.want
+
+exec gtdo -p listpri c
+cmp stdout lsp2.want
+
+# listpri highlighting
+exec gtdo listpri
+cmpenv stdout lsp3.want
+
+# listpri filtering priorities
+cp pri5.txt todo.txt
+exec gtdo -p listpri
+cmp stdout lsp4.want
+
+exec gtdo -p listpri b
+cmp stdout lsp5.want
+
+exec gtdo -p listpri c
+cmp stdout lsp6.want
+
+exec gtdo -p listpri m
+cmp stdout lsp7.want
+
+exec gtdo -p listpri n
+cmp stdout lsp8.want
+
+# listpri filtering priority ranges
+cp priaz.txt todo.txt
+exec gtdo -p listpri a-c
+cmp stdout lsp9.want
+
+exec gtdo -p listpri c-Z
+cmp stdout lsp10.want
+
+exec gtdo -p listpri A-
+cmp stdout lsp11.want
+
+exec gtdo -p listpri A-C A-Z
+cmp stdout lsp12.want
+
+exec gtdo -p listpri X A-Z
+cmp stdout lsp13.want
+
+# concatenation of priorities and -ranges
+exec gtdo -p listpri CX
+cmp stdout lsp14.want
+
+exec gtdo -p listpri ABR-Y
+cmp stdout lsp15.want
+
+exec gtdo -p listpri A-
+cmp stdout lsp16.want
+
+# listpri filtering of TERM
+cp pri6.txt todo.txt
+exec gtdo -p listpri 'should be'
+cmp stdout lsp17.want
+
+exec gtdo -p listpri a 'should be'
+cmp stdout lsp18.want
+
+exec gtdo -p listpri b second
+cmp stdout lsp19.want
+
+exec gtdo -p listpri x 'should be'
+cmp stdout lsp20.want
+
+-- pri3.txt --
+(B) smell the uppercase Roses +flowers @outside
+(C) notice the sunflowers
+stop
+-- pri5.txt --
+(B) smell the uppercase Roses +flowers @outside
+(C) notice the sunflowers
+(m)others will notice this
+(n) not a prioritized task
+notice the (C)opyright
+-- priaz.txt --
+(B) smell the uppercase Roses +flowers @outside
+(X) clean the house from A-Z
+(C) notice the sunflowers
+(X) listen to music
+buy more records from artists A-Z
+-- pri6.txt --
+(B) ccc xxx this line should be third.
+ccc xxx this line should be third.
+(A) aaa zzz this line should be first.
+aaa zzz this line should be first.
+(B) bbb yyy this line should be second.
+bbb yyy this line should be second.
+-- lsp1.want --
+--
+TODO: 0 of 3 tasks shown
+-- lsp2.want --
+2 (C) notice the sunflowers
+--
+TODO: 1 of 3 tasks shown
+-- lsp3.want --
+$ESC[0;32m1 (B) smell the uppercase Roses +flowers @outside$ESC[0m
+$ESC[1;34m2 (C) notice the sunflowers$ESC[0m
+--
+TODO: 2 of 3 tasks shown
+-- lsp4.want --
+1 (B) smell the uppercase Roses +flowers @outside
+2 (C) notice the sunflowers
+--
+TODO: 2 of 5 tasks shown
+-- lsp5.want --
+1 (B) smell the uppercase Roses +flowers @outside
+--
+TODO: 1 of 5 tasks shown
+-- lsp6.want --
+2 (C) notice the sunflowers
+--
+TODO: 1 of 5 tasks shown
+-- lsp7.want --
+--
+TODO: 0 of 5 tasks shown
+-- lsp8.want --
+--
+TODO: 0 of 5 tasks shown
+-- lsp9.want --
+1 (B) smell the uppercase Roses +flowers @outside
+3 (C) notice the sunflowers
+--
+TODO: 2 of 5 tasks shown
+-- lsp10.want --
+3 (C) notice the sunflowers
+2 (X) clean the house from A-Z
+4 (X) listen to music
+--
+TODO: 3 of 5 tasks shown
+-- lsp11.want --
+2 (X) clean the house from A-Z
+--
+TODO: 1 of 5 tasks shown
+-- lsp12.want --
+--
+TODO: 0 of 5 tasks shown
+-- lsp13.want --
+2 (X) clean the house from A-Z
+--
+TODO: 1 of 5 tasks shown
+-- lsp14.want --
+3 (C) notice the sunflowers
+2 (X) clean the house from A-Z
+4 (X) listen to music
+--
+TODO: 3 of 5 tasks shown
+-- lsp15.want --
+1 (B) smell the uppercase Roses +flowers @outside
+2 (X) clean the house from A-Z
+4 (X) listen to music
+--
+TODO: 3 of 5 tasks shown
+-- lsp16.want --
+2 (X) clean the house from A-Z
+--
+TODO: 1 of 5 tasks shown
+-- lsp17.want --
+3 (A) aaa zzz this line should be first.
+5 (B) bbb yyy this line should be second.
+1 (B) ccc xxx this line should be third.
+--
+TODO: 3 of 6 tasks shown
+-- lsp18.want --
+3 (A) aaa zzz this line should be first.
+--
+TODO: 1 of 6 tasks shown
+-- lsp19.want --
+5 (B) bbb yyy this line should be second.
+--
+TODO: 1 of 6 tasks shown
+-- lsp20.want --
+--
+TODO: 0 of 6 tasks shown

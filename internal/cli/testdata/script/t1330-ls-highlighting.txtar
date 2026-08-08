@@ -1,0 +1,164 @@
+# Port of t1330-ls-highlighting.sh: list highlighting, all sessions in
+# scope. The custom color sessions use TOML configs (todo.sh's cfg
+# exports).
+
+# default highlighting
+cp pri8.txt todo.txt
+exec gtdo ls
+cmpenv stdout hl1.want
+
+# customized highlighting: colors can be arbitrary strings
+exec gtdo -d custom.toml ls
+cmp stdout hl2.want
+
+# additional highlighting pri E+Z
+exec gtdo -d additional.toml ls
+cmpenv stdout hl3.want
+
+# different highlighting for pri X
+exec gtdo -d prix.toml ls
+cmpenv stdout hl4.want
+
+# highlighting of done (but not yet archived) tasks
+cp done5.txt todo.txt
+exec gtdo -a do 2
+cmp stdout hl5.want
+
+exec gtdo list
+cmpenv stdout hl6.want
+
+exec gtdo -a do 4
+cmp stdout hl7.want
+
+exec gtdo list
+cmpenv stdout hl8.want
+
+# highlighting with hidden contexts/projects
+cp hideme.txt todo.txt
+exec gtdo -+ -@ list
+cmpenv stdout hl9.want
+
+# priorities are only matched at the start of the task
+cp pripos.txt todo.txt
+exec gtdo ls
+cmpenv stdout hl10.want
+
+-- custom.toml --
+[colors]
+pri_a = "${color yellow}"
+pri_b = "${color green}"
+pri_c = "${color LightBlue}"
+pri_x = "${color white}"
+
+[colors.map]
+default = "${color}"
+-- additional.toml --
+[colors]
+pri_e = "brown"
+pri_z = "light_purple"
+-- prix.toml --
+[colors]
+pri_x = "brown"
+-- pri8.txt --
+(A) @con01 +prj01 -- Some project 01 task, pri A
+(B) @con02 +prj02 -- Some project 02 task, pri B
+(C) @con01 +prj01 -- Some project 01 task, pri C
+(D) @con02 +prj02 -- Some project 02 task, pri D
+(E) @con01 +prj01 -- Some project 01 task, pri E
+(Z) @con02 +prj02 -- Some project 02 task, pri Z
+@con01 +prj01 -- Some project 01 task, no priority
+@con02 +prj02 -- Some project 02 task, no priority
+-- done5.txt --
+(A) smell the uppercase Roses +flowers @outside
+remove1
+notice the sunflowers
+remove2
+stop
+-- hideme.txt --
+(A) +project at the beginning, with priority
+(B) with priority, ending in a +project
+(C) @context at the beginning, with priority
+(Z) with priority, ending in a @context
+-- pripos.txt --
+(D) some prioritized task
+not prioritized
+should not be seen as PRIORITIZE(D) task
+-- hl1.want --
+$ESC[1;33m1 (A) @con01 +prj01 -- Some project 01 task, pri A$ESC[0m
+$ESC[0;32m2 (B) @con02 +prj02 -- Some project 02 task, pri B$ESC[0m
+$ESC[1;34m3 (C) @con01 +prj01 -- Some project 01 task, pri C$ESC[0m
+$ESC[1;37m4 (D) @con02 +prj02 -- Some project 02 task, pri D$ESC[0m
+$ESC[1;37m5 (E) @con01 +prj01 -- Some project 01 task, pri E$ESC[0m
+$ESC[1;37m6 (Z) @con02 +prj02 -- Some project 02 task, pri Z$ESC[0m
+7 @con01 +prj01 -- Some project 01 task, no priority
+8 @con02 +prj02 -- Some project 02 task, no priority
+--
+TODO: 8 of 8 tasks shown
+-- hl2.want --
+${color yellow}1 (A) @con01 +prj01 -- Some project 01 task, pri A${color}
+${color green}2 (B) @con02 +prj02 -- Some project 02 task, pri B${color}
+${color LightBlue}3 (C) @con01 +prj01 -- Some project 01 task, pri C${color}
+${color white}4 (D) @con02 +prj02 -- Some project 02 task, pri D${color}
+${color white}5 (E) @con01 +prj01 -- Some project 01 task, pri E${color}
+${color white}6 (Z) @con02 +prj02 -- Some project 02 task, pri Z${color}
+7 @con01 +prj01 -- Some project 01 task, no priority
+8 @con02 +prj02 -- Some project 02 task, no priority
+--
+TODO: 8 of 8 tasks shown
+-- hl3.want --
+$ESC[1;33m1 (A) @con01 +prj01 -- Some project 01 task, pri A$ESC[0m
+$ESC[0;32m2 (B) @con02 +prj02 -- Some project 02 task, pri B$ESC[0m
+$ESC[1;34m3 (C) @con01 +prj01 -- Some project 01 task, pri C$ESC[0m
+$ESC[1;37m4 (D) @con02 +prj02 -- Some project 02 task, pri D$ESC[0m
+$ESC[0;33m5 (E) @con01 +prj01 -- Some project 01 task, pri E$ESC[0m
+$ESC[1;35m6 (Z) @con02 +prj02 -- Some project 02 task, pri Z$ESC[0m
+7 @con01 +prj01 -- Some project 01 task, no priority
+8 @con02 +prj02 -- Some project 02 task, no priority
+--
+TODO: 8 of 8 tasks shown
+-- hl4.want --
+$ESC[1;33m1 (A) @con01 +prj01 -- Some project 01 task, pri A$ESC[0m
+$ESC[0;32m2 (B) @con02 +prj02 -- Some project 02 task, pri B$ESC[0m
+$ESC[1;34m3 (C) @con01 +prj01 -- Some project 01 task, pri C$ESC[0m
+$ESC[0;33m4 (D) @con02 +prj02 -- Some project 02 task, pri D$ESC[0m
+$ESC[0;33m5 (E) @con01 +prj01 -- Some project 01 task, pri E$ESC[0m
+$ESC[0;33m6 (Z) @con02 +prj02 -- Some project 02 task, pri Z$ESC[0m
+7 @con01 +prj01 -- Some project 01 task, no priority
+8 @con02 +prj02 -- Some project 02 task, no priority
+--
+TODO: 8 of 8 tasks shown
+-- hl5.want --
+2 x 2009-02-13 remove1
+TODO: 2 marked as done.
+-- hl6.want --
+$ESC[1;33m1 (A) smell the uppercase Roses +flowers @outside$ESC[0m
+3 notice the sunflowers
+4 remove2
+5 stop
+$ESC[0;37m2 x 2009-02-13 remove1$ESC[0m
+--
+TODO: 5 of 5 tasks shown
+-- hl7.want --
+4 x 2009-02-13 remove2
+TODO: 4 marked as done.
+-- hl8.want --
+$ESC[1;33m1 (A) smell the uppercase Roses +flowers @outside$ESC[0m
+3 notice the sunflowers
+5 stop
+$ESC[0;37m2 x 2009-02-13 remove1$ESC[0m
+$ESC[0;37m4 x 2009-02-13 remove2$ESC[0m
+--
+TODO: 5 of 5 tasks shown
+-- hl9.want --
+$ESC[1;33m1 (A) at the beginning, with priority$ESC[0m
+$ESC[0;32m2 (B) with priority, ending in a$ESC[0m
+$ESC[1;34m3 (C) at the beginning, with priority$ESC[0m
+$ESC[1;37m4 (Z) with priority, ending in a$ESC[0m
+--
+TODO: 4 of 4 tasks shown
+-- hl10.want --
+$ESC[1;37m1 (D) some prioritized task$ESC[0m
+2 not prioritized
+3 should not be seen as PRIORITIZE(D) task
+--
+TODO: 3 of 3 tasks shown

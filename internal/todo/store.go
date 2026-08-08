@@ -73,6 +73,25 @@ func (s *Store) ReadTasks(path string) ([]Task, error) {
 	return tasks, nil
 }
 
+// ReadAllTasks returns the tasks of todo.txt followed by done.txt,
+// numbered continuously 1..N across both files — the shape of
+// `cat "$TODO_FILE" "$DONE_FILE"` that listall formats (§6.3).
+func (s *Store) ReadAllTasks() ([]Task, error) {
+	var out []Task
+	n := 0
+	for _, path := range []string{s.TodoFile, s.DoneFile} {
+		tasks, err := s.ReadTasks(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, t := range tasks {
+			n++
+			out = append(out, Task{LineNumber: n, Text: t.Text})
+		}
+	}
+	return out, nil
+}
+
 // readLines splits path into its lines. finalNL reports whether the file
 // ends with a newline; an empty file yields no lines.
 func readLines(path string) (lines []string, finalNL bool, err error) {
@@ -125,9 +144,9 @@ func appendTo(path string, add []string) error {
 	return writeLines(path, append(lines, add...), true)
 }
 
-// countLines returns the number of lines in path, todo.sh's `sed -n '$ ='`
+// CountLines returns the number of lines in path, todo.sh's `sed -n '$ ='`
 // (blank lines count).
-func countLines(path string) (int, error) {
+func (s *Store) CountLines(path string) (int, error) {
 	lines, _, err := readLines(path)
 	if err != nil {
 		return 0, err

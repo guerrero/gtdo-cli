@@ -1,0 +1,104 @@
+# Port of t1310-listcon.sh: listcon functionality. The TODOTXT_SIGIL_*
+# customization sessions are out of scope (plan §2); the sourcevar
+# sessions are in scope.
+
+# listcon no contexts: empty output, exit 0
+cp none.txt todo.txt
+exec gtdo listcon
+stdout '^$'
+
+# Single context per line
+cp single.txt todo.txt
+exec gtdo listcon
+cmp stdout lc1.want
+
+# Multi-context per line
+cp multi.txt todo.txt
+exec gtdo listcon
+cmp stdout lc2.want
+
+# listcon e-mail address test
+cp email.txt todo.txt
+exec gtdo listcon
+cmp stdout lc3.want
+
+# listcon with project
+cp garden.txt todo.txt
+exec gtdo listcon +landscape
+cmp stdout lc4.want
+
+# listcon with default configuration: @home) is listed, w:@Other and
+# (@school are not (they do not start with the sigil)
+cp weird.txt todo.txt
+exec gtdo listcon
+cmp stdout lc5.want
+
+# listcon from done tasks
+cp source.txt todo.txt
+env TODOTXT_SOURCEVAR='$DONE_FILE'
+exec gtdo listcon
+cmp stdout lc6.want
+
+# listcon from combined open + done tasks
+env TODOTXT_SOURCEVAR='("$TODO_FILE" "$DONE_FILE")'
+exec gtdo listcon
+cmp stdout lc7.want
+
+-- none.txt --
+item 1
+item 2
+item 3
+-- single.txt --
+(A) @1 -- Some context 1 task, whitespace, one char
+(A) @c2 -- Some context 2 task, whitespace, two char
+@con03 -- Some context 3 task, no whitespace
+@con04 -- Some context 4 task, no whitespace
+@con05@con06 -- weird context
+-- multi.txt --
+@con01 -- Some context 1 task
+@con02 -- Some context 2 task
+@con02 @con03 -- Multi-context task
+-- email.txt --
+@con01 -- Some context 1 task
+@con02 -- Some context 2 task
+@con02 ginatrapani@gmail.com -- Some context 2 task
+-- garden.txt --
+(B) smell the uppercase Roses +roses @outside +shared
+(C) notice the sunflowers +sunflowers @garden +shared +landscape
+stop
+-- weird.txt --
+(B) +math (@school or @home) integrate @x and @y
+(C) say thanks @GinaTrapani w:@OtherContributors
+stop
+-- source.txt --
+@con01 -- Some context 1 task
+-- done.txt --
+x 2012-02-21 @done01 -- Some context 1 done task
+x 2012-02-21 @done02 -- Some context 2 done task
+-- lc1.want --
+@1
+@c2
+@con03
+@con04
+@con05@con06
+-- lc2.want --
+@con01
+@con02
+@con03
+-- lc3.want --
+@con01
+@con02
+-- lc4.want --
+@garden
+-- lc5.want --
+@GinaTrapani
+@home)
+@x
+@y
+-- lc6.want --
+@done01
+@done02
+-- lc7.want --
+@con01
+@done01
+@done02

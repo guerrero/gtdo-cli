@@ -58,6 +58,13 @@ type Config struct {
 	// Plain disables all color output (flag -p/-c, TODOTXT_PLAIN).
 	Plain bool
 
+	// HideProjects, HideContexts, and HidePriority implement the -+ -@ -P
+	// flags: odd counts hide the sigils and the (X) priority label in list
+	// output (§6.1). Flags only, like todo.sh's getopts toggles.
+	HideProjects bool
+	HideContexts bool
+	HidePriority bool
+
 	colors map[string]string // resolved ANSI codes by role; "" = off
 }
 
@@ -105,6 +112,9 @@ func resolve(opts Options, f fileConfig, home string) Config {
 		AutoArchive:         pickBool(opts.AutoArchiveSet, opts.AutoArchive, "TODOTXT_AUTO_ARCHIVE", f.Behavior.AutoArchive),
 		DateOnAdd:           pickBool(opts.DateOnAddSet, opts.DateOnAdd, "TODOTXT_DATE_ON_ADD", f.Behavior.DateOnAdd),
 		Plain:               pickBool(opts.PlainSet, opts.Plain, "TODOTXT_PLAIN", false),
+		HideProjects:        opts.HideProjects,
+		HideContexts:        opts.HideContexts,
+		HidePriority:        opts.HidePriority,
 		PriorityOnAdd:       pickString("TODOTXT_PRIORITY_ON_ADD", f.Behavior.PriorityOnAdd),
 		DefaultAction:       pickString("TODOTXT_DEFAULT_ACTION", f.Behavior.DefaultAction),
 		SourceVar:           pickString("TODOTXT_SOURCEVAR", f.Behavior.SourceVar),

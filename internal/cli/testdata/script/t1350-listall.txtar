@@ -1,0 +1,165 @@
+# Port of t1350-listall.sh: listall functionality, all sessions in scope.
+
+cp todo5.txt todo.txt
+cp done2.txt done.txt
+
+# basic listall
+exec gtdo -p listall
+cmp stdout la1.want
+
+# listall highlighting
+exec gtdo listall
+cmpenv stdout la2.want
+
+# listall nonverbose
+env TODOTXT_VERBOSE=0
+exec gtdo -p listall
+cmp stdout la3.want
+
+# listall filtering
+env TODOTXT_VERBOSE=1
+exec gtdo -p listall @outside
+cmp stdout la4.want
+
+exec gtdo -p listall the
+cmp stdout la5.want
+
+exec gtdo -p listall breakfast
+cmp stdout la6.want
+
+exec gtdo -p listall doesnotmatch
+cmp stdout la7.want
+
+# listall number width
+cp todo5.txt todo.txt
+cp done6.txt done.txt
+exec gtdo -p listall
+cmp stdout la8.want
+
+env TODOTXT_VERBOSE=0
+exec gtdo add new task 1
+
+exec gtdo add new task 2
+
+exec gtdo add new task 3
+
+exec gtdo add new task 4
+
+exec gtdo add new task 5
+
+env TODOTXT_VERBOSE=1
+exec gtdo -p listall
+cmp stdout la9.want
+
+-- todo5.txt --
+smell the uppercase Roses +flowers @outside
+x 2011-08-08 tend the garden @outside
+notice the sunflowers
+x 2011-12-26 go outside +wakeup
+(A) stop
+-- done2.txt --
+x 2011-12-01 eat breakfast
+x 2011-12-05 smell the coffee +wakeup
+-- done6.txt --
+x 2010-01-01 old task 1
+x 2010-01-01 old task 2
+x 2010-01-01 old task 3
+x 2010-01-01 old task 4
+x 2011-12-01 eat breakfast
+x 2011-12-05 smell the coffee +wakeup
+-- la1.want --
+5 (A) stop
+3 notice the sunflowers
+1 smell the uppercase Roses +flowers @outside
+2 x 2011-08-08 tend the garden @outside
+0 x 2011-12-01 eat breakfast
+0 x 2011-12-05 smell the coffee +wakeup
+4 x 2011-12-26 go outside +wakeup
+--
+TODO: 5 of 5 tasks shown
+DONE: 2 of 2 tasks shown
+total 7 of 7 tasks shown
+-- la2.want --
+$ESC[1;33m5 (A) stop$ESC[0m
+3 notice the sunflowers
+1 smell the uppercase Roses +flowers @outside
+$ESC[0;37m2 x 2011-08-08 tend the garden @outside$ESC[0m
+$ESC[0;37m0 x 2011-12-01 eat breakfast$ESC[0m
+$ESC[0;37m0 x 2011-12-05 smell the coffee +wakeup$ESC[0m
+$ESC[0;37m4 x 2011-12-26 go outside +wakeup$ESC[0m
+--
+TODO: 5 of 5 tasks shown
+DONE: 2 of 2 tasks shown
+total 7 of 7 tasks shown
+-- la3.want --
+5 (A) stop
+3 notice the sunflowers
+1 smell the uppercase Roses +flowers @outside
+2 x 2011-08-08 tend the garden @outside
+0 x 2011-12-01 eat breakfast
+0 x 2011-12-05 smell the coffee +wakeup
+4 x 2011-12-26 go outside +wakeup
+-- la4.want --
+1 smell the uppercase Roses +flowers @outside
+2 x 2011-08-08 tend the garden @outside
+--
+TODO: 2 of 5 tasks shown
+DONE: 0 of 2 tasks shown
+total 2 of 7 tasks shown
+-- la5.want --
+3 notice the sunflowers
+1 smell the uppercase Roses +flowers @outside
+2 x 2011-08-08 tend the garden @outside
+0 x 2011-12-05 smell the coffee +wakeup
+--
+TODO: 3 of 5 tasks shown
+DONE: 1 of 2 tasks shown
+total 4 of 7 tasks shown
+-- la6.want --
+0 x 2011-12-01 eat breakfast
+--
+TODO: 0 of 5 tasks shown
+DONE: 1 of 2 tasks shown
+total 1 of 7 tasks shown
+-- la7.want --
+--
+TODO: 0 of 5 tasks shown
+DONE: 0 of 2 tasks shown
+total 0 of 7 tasks shown
+-- la8.want --
+5 (A) stop
+3 notice the sunflowers
+1 smell the uppercase Roses +flowers @outside
+0 x 2010-01-01 old task 1
+0 x 2010-01-01 old task 2
+0 x 2010-01-01 old task 3
+0 x 2010-01-01 old task 4
+2 x 2011-08-08 tend the garden @outside
+0 x 2011-12-01 eat breakfast
+0 x 2011-12-05 smell the coffee +wakeup
+4 x 2011-12-26 go outside +wakeup
+--
+TODO: 5 of 5 tasks shown
+DONE: 6 of 6 tasks shown
+total 11 of 11 tasks shown
+-- la9.want --
+05 (A) stop
+06 new task 1
+07 new task 2
+08 new task 3
+09 new task 4
+10 new task 5
+03 notice the sunflowers
+01 smell the uppercase Roses +flowers @outside
+00 x 2010-01-01 old task 1
+00 x 2010-01-01 old task 2
+00 x 2010-01-01 old task 3
+00 x 2010-01-01 old task 4
+02 x 2011-08-08 tend the garden @outside
+00 x 2011-12-01 eat breakfast
+00 x 2011-12-05 smell the coffee +wakeup
+04 x 2011-12-26 go outside +wakeup
+--
+TODO: 10 of 10 tasks shown
+DONE: 6 of 6 tasks shown
+total 16 of 16 tasks shown

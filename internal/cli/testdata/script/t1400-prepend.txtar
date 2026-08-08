@@ -1,10 +1,16 @@
-# Port of t1400-prepend.sh: prepend functionality (list parts belong to
-# Task 8).
+# Port of t1400-prepend.sh: prepend functionality, including the list
+# sessions.
 
 ! exec gtdo prepend B B
 cmp stderr usage.want
 
 cp pre3.txt todo.txt
+exec gtdo list
+cmpenv stdout prelist1.want
+
+exec gtdo -p list
+cmp stdout prelist2.want
+
 exec gtdo prepend 2 test
 cmp stdout p1.want
 
@@ -22,8 +28,11 @@ cp pre4.txt todo.txt
 exec gtdo prepend 1 '~@#$%^&*()-_=+[{]}|;:''',<.>/?
 cmp stdout p5.want
 
-exec gtdo prepend 2 '`!\\"'
+exec gtdo prepend 2 '\`!\\"'
 cmp stdout p6.want
+
+exec gtdo list
+cmp stdout prelist3.want
 
 # prepend handling prepended date on add
 rm todo.txt
@@ -68,7 +77,26 @@ jump on hay
 -- p5.want --
 1 ~@#$%^&*()-_=+[{]}|;:',<.>/? smell the cows
 -- p6.want --
-2 `!\\" grow some corn
+2 \`!\\" grow some corn
+-- prelist1.want --
+$ESC[0;32m1 (B) smell the uppercase Roses +flowers @outside$ESC[0m
+2 notice the sunflowers
+3 stop
+--
+TODO: 3 of 3 tasks shown
+-- prelist2.want --
+1 (B) smell the uppercase Roses +flowers @outside
+2 notice the sunflowers
+3 stop
+--
+TODO: 3 of 3 tasks shown
+-- prelist3.want --
+4 chase the chickens
+3 thrash some hay
+2 \`!\\" grow some corn
+1 ~@#$%^&*()-_=+[{]}|;:',<.>/? smell the cows
+--
+TODO: 4 of 4 tasks shown
 -- p7.want --
 1 2009-02-13 this is just a new task
 -- p8.want --

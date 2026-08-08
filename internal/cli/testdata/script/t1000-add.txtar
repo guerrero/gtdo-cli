@@ -1,27 +1,42 @@
-# Port of t1000-addlist.sh: basic add functionality. The list parts of the
-# original test belong to Task 8 (t1300); file states are checked with
-# cat in their place.
+# Port of t1000-addlist.sh: basic add functionality plus the list
+# sessions (the original test interleaves them).
 
-# basic add
+# basic add/list
 exec gtdo add notice the daisies
 cmp stdout basic1.want
+
+exec gtdo list
+cmp stdout list1.want
 
 exec gtdo add smell the roses
 cmp stdout basic2.want
 
+exec gtdo list
+cmp stdout list2.want
+
+# basic list filtering
+exec gtdo list daisies
+cmp stdout list3.want
+
+exec gtdo list smell
+cmp stdout list4.want
+
+# case-insensitive filtering
 exec gtdo add 'smell the uppercase Roses'
 cmp stdout basic3.want
 
+exec gtdo list roses
+cmp stdout list5.want
+
 # add with symbols
 exec gtdo add '~@#$%^&*()-_=+[{]}|;:''',<.>/?
-
 cmp stdout sym1.want
 
-exec gtdo add '`!\\"'
+exec gtdo add '\`!\\"'
 cmp stdout sym2.want
 
-exec cat todo.txt
-cmp stdout symfile.want
+exec gtdo list
+cmp stdout list6.want
 
 # advanced add: fresh file
 rm todo.txt
@@ -31,8 +46,8 @@ cmp stdout adv1.want
 exec gtdo add notice how the   spaces    get lost
 cmp stdout adv2.want
 
-exec cat todo.txt
-cmp stdout advfile.want
+exec gtdo list
+cmp stdout list7.want
 
 # add with CR: the CR byte is squashed to a space (cleaninput); fed via
 # stdin because a txtar command line cannot carry the byte.
@@ -41,38 +56,71 @@ stdin cr.txt
 exec gtdo add
 cmp stdout cr.want
 
+exec gtdo list
+cmp stdout list8.want
+
 -- basic1.want --
 1 notice the daisies
 TODO: 1 added.
+-- list1.want --
+1 notice the daisies
+--
+TODO: 1 of 1 tasks shown
 -- basic2.want --
 2 smell the roses
 TODO: 2 added.
+-- list2.want --
+1 notice the daisies
+2 smell the roses
+--
+TODO: 2 of 2 tasks shown
+-- list3.want --
+1 notice the daisies
+--
+TODO: 1 of 2 tasks shown
+-- list4.want --
+2 smell the roses
+--
+TODO: 1 of 2 tasks shown
 -- basic3.want --
 3 smell the uppercase Roses
 TODO: 3 added.
+-- list5.want --
+2 smell the roses
+3 smell the uppercase Roses
+--
+TODO: 2 of 3 tasks shown
 -- sym1.want --
 4 ~@#$%^&*()-_=+[{]}|;:',<.>/?
 TODO: 4 added.
 -- sym2.want --
-5 `!\\"
+5 \`!\\"
 TODO: 5 added.
--- symfile.want --
-notice the daisies
-smell the roses
-smell the uppercase Roses
-~@#$%^&*()-_=+[{]}|;:',<.>/?
-`!\\"
+-- list6.want --
+1 notice the daisies
+2 smell the roses
+3 smell the uppercase Roses
+5 \`!\\"
+4 ~@#$%^&*()-_=+[{]}|;:',<.>/?
+--
+TODO: 5 of 5 tasks shown
 -- adv1.want --
 1 notice the   three   spaces
 TODO: 1 added.
 -- adv2.want --
 2 notice how the spaces get lost
 TODO: 2 added.
--- advfile.want --
-notice the   three   spaces
-notice how the spaces get lost
+-- list7.want --
+2 notice how the spaces get lost
+1 notice the   three   spaces
+--
+TODO: 2 of 2 tasks shown
 -- cr.txt --
 smell theCarriage Return
 -- cr.want --
 1 smell the Carriage Return
 TODO: 1 added.
+-- list8.want --
+1 smell the Carriage Return
+--
+TODO: 1 of 1 tasks shown

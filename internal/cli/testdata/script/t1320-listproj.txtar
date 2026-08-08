@@ -1,0 +1,147 @@
+# Port of t1320-listproj.sh: listproj functionality. The TODOTXT_SIGIL_*
+# customization, custom-config, and GREP_OPTIONS sessions are out of scope
+# (plan §2); the sourcevar sessions are in scope.
+
+# listproj no projects: empty output, exit 0
+cp none.txt todo.txt
+exec gtdo listproj
+stdout '^$'
+
+# Single project per line
+cp single.txt todo.txt
+exec gtdo listproj
+cmp stdout lp1.want
+
+# Multi-project per line
+cp multi.txt todo.txt
+exec gtdo listproj
+cmp stdout lp2.want
+
+# listproj embedded + test
+cp email.txt todo.txt
+exec gtdo listproj
+cmp stdout lp3.want
+
+# basic listproj
+cp garden.txt todo.txt
+exec gtdo listproj
+cmp stdout lp4.want
+
+# listproj with context
+exec gtdo listproj @garden
+cmp stdout lp5.want
+
+# listproj of projects at various positions
+cp positions.txt todo.txt
+exec gtdo listproj
+cmp stdout lp6.want
+
+# listproj with default configuration: +1 is listed, [+gardening] and
+# [+landscape] are not (they do not start with the sigil)
+cp brackets.txt todo.txt
+exec gtdo listproj
+cmp stdout lp7.want
+
+# -+ is a no-op for listproj (listWordsWithSigil does not format)
+cp garden.txt todo.txt
+exec gtdo -+ listproj @garden
+cmp stdout lp8.want
+
+# listproj from done tasks
+cp source.txt todo.txt
+env TODOTXT_SOURCEVAR='$DONE_FILE'
+exec gtdo listproj
+cmp stdout lp9.want
+
+# listproj from done tasks with filtering
+exec gtdo listproj Special
+cmp stdout lp10.want
+
+# listproj from combined open + done tasks
+env TODOTXT_SOURCEVAR='("$TODO_FILE" "$DONE_FILE")'
+exec gtdo listproj
+cmp stdout lp11.want
+
+-- none.txt --
+item 1
+item 2
+item 3
+-- single.txt --
+(A) +1 -- Some project 1 task, whitespace, one char
+(A) +p2 -- Some project 2 task, whitespace, two char
++prj03 -- Some project 3 task, no whitespace
++prj04 -- Some project 4 task, no whitespace
++prj05+prj06 -- weird project
+-- multi.txt --
++prj01 -- Some project 1 task
++prj02 -- Some project 2 task
++prj02 +prj03 -- Multi-project task
+-- email.txt --
++prj01 -- Some project 1 task
++prj02 -- Some project 2 task
++prj02 ginatrapani+todo@gmail.com -- Some project 2 task
+-- garden.txt --
+(B) smell the uppercase Roses +roses @outside +shared
+(C) notice the sunflowers +sunflowers @garden +shared +landscape
+stop
+-- positions.txt --
++roses +flowers
++roses and only +flowers
+(B) +roses prioritized +flowers
+(B) 2024-02-21 +roses prioritized +flowers
+x 2024-02-21 2024-02-19 +roses done +flowers
++roses +flowers at the front
+  +roses +flowers at the front with leading space
+my +flowers are +roses in the middle
+at the back pick the +roses +flowers
+at the back with trailing space +flowers +roses 
+-- brackets.txt --
+(B) give a +1 to this project
+(C) notice the sunflowers +sunflowers [+gardening] [+landscape]
+stop
+-- source.txt --
++prj01 -- Some project 1 task
+-- done.txt --
+x 2012-02-21 +done01 -- Special project 1 done task
+x 2012-02-21 +done02 -- Some project 2 done task
+-- lp1.want --
++1
++p2
++prj03
++prj04
++prj05+prj06
+-- lp2.want --
++prj01
++prj02
++prj03
+-- lp3.want --
++prj01
++prj02
+-- lp4.want --
++landscape
++roses
++shared
++sunflowers
+-- lp5.want --
++landscape
++shared
++sunflowers
+-- lp6.want --
++flowers
++roses
+-- lp7.want --
++1
++sunflowers
+-- lp8.want --
++landscape
++shared
++sunflowers
+-- lp9.want --
++done01
++done02
+-- lp10.want --
++done01
+-- lp11.want --
++done01
++done02
++prj01

@@ -59,11 +59,12 @@ func formatLines(t *testing.T, texts []string, pal Color) []string {
 func TestFromConfigDefaults(t *testing.T) {
 	pal := FromConfig(loadConfig(t, ""))
 	want := Color{
-		PriA: "\x1b[1;33m",
-		PriB: "\x1b[0;32m",
-		PriC: "\x1b[1;34m",
-		PriX: "\x1b[1;37m",
-		Done: "\x1b[0;37m",
+		PriA:    "\x1b[1;33m",
+		PriB:    "\x1b[0;32m",
+		PriC:    "\x1b[1;34m",
+		PriX:    "\x1b[1;37m",
+		Done:    "\x1b[0;37m",
+		Default: "\x1b[0m",
 	}
 	if !reflect.DeepEqual(pal, want) {
 		t.Errorf("FromConfig(defaults) = %+v, want %+v", pal, want)

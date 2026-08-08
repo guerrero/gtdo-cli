@@ -1,9 +1,12 @@
-# Port of t1900-archive.sh: archive functionality (list parts belong to
-# Task 8; the archived file state is checked with cat).
+# Port of t1900-archive.sh: archive functionality, including the list
+# session after archiving.
 
 cp arch6.txt todo.txt
 exec gtdo archive
 cmpenv stdout a1.want
+
+exec gtdo ls
+cmp stdout alist.want
 
 exec cat todo.txt
 cmp stdout a2.want
@@ -29,3 +32,11 @@ one
 four
 -- a3.want --
 TODO: $HOME/todo.txt does not contain any done tasks.
+-- alist.want --
+5 four
+1 one
+4 one
+3 three
+2 two
+--
+TODO: 5 of 5 tasks shown

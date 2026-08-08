@@ -453,11 +453,11 @@ func (s *Store) Archive() ([]string, error) {
 // first is the caller's job, mirroring todo.sh's recursive archive
 // invocation.
 func (s *Store) Report(now time.Time) (line string, updated bool, err error) {
-	total, err := countLines(s.TodoFile)
+	total, err := s.CountLines(s.TodoFile)
 	if err != nil {
 		return "", false, err
 	}
-	tdone, err := countLines(s.DoneFile)
+	tdone, err := s.CountLines(s.DoneFile)
 	if err != nil {
 		return "", false, err
 	}

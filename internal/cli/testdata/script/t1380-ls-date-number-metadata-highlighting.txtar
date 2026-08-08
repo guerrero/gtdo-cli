@@ -1,0 +1,33 @@
+# Port of t1380-ls-date-number-metadata-highlighting.sh: highlighting of
+# dates, item numbers, and key:value metadata with custom colors (TOML in
+# gtdo).
+
+cp dates.txt todo.txt
+exec gtdo -d colors.toml ls
+cmpenv stdout hl1.want
+
+# -p disables the custom colors
+exec gtdo -p -d colors.toml ls
+cmp stdout hl2.want
+
+-- colors.toml --
+[colors]
+color_date = "\u001b[0;31m"
+color_meta = "\u001b[0;32m"
+color_number = "\u001b[0;34m"
+-- dates.txt --
+2018-11-11 task with date
+task with metadata due:2018-12-31
+task without date and without metadata
+-- hl1.want --
+$ESC[0;34m1$ESC[0m $ESC[0;31m2018-11-11$ESC[0m task with date
+$ESC[0;34m2$ESC[0m task with metadata $ESC[0;32mdue:2018-12-31$ESC[0m
+$ESC[0;34m3$ESC[0m task without date and without metadata
+--
+TODO: 3 of 3 tasks shown
+-- hl2.want --
+1 2018-11-11 task with date
+2 task with metadata due:2018-12-31
+3 task without date and without metadata
+--
+TODO: 3 of 3 tasks shown

@@ -81,6 +81,18 @@ func TestSortLinesLeadingBlanks(t *testing.T) {
 	}
 }
 
+// sort -f folds lower case to upper case, so a letter-leading key sorts
+// before punctuation (verified against the local sort, t1100's symbols
+// listing: "chase" < "`!\"" < "~@#$...").
+func TestSortLinesFoldToUpper(t *testing.T) {
+	lines := []string{"1 `!\\\"", "2 chase", "3 ~tilde"}
+	want := []string{"2 chase", "1 `!\\\"", "3 ~tilde"}
+	SortLines(lines)
+	if !reflect.DeepEqual(lines, want) {
+		t.Errorf("SortLines = %v, want %v", lines, want)
+	}
+}
+
 func TestSortLinesEmpty(t *testing.T) {
 	var lines []string
 	SortLines(lines)

@@ -1,5 +1,5 @@
-# Port of t1500-do.sh: do functionality with auto-archive (list parts
-# belong to Task 8; file states are checked with cat).
+# Port of t1500-do.sh: do functionality with auto-archive, including the
+# initial list session.
 
 ! exec gtdo do B B
 cmp stderr usage.want
@@ -8,6 +8,9 @@ cmp stderr usage.want
 cmp stderr usage.want
 
 cp do7.txt todo.txt
+exec gtdo list
+cmp stdout dlist.want
+
 exec gtdo do 7,6
 cmpenv stdout d1.want
 
@@ -29,6 +32,16 @@ cmp stderr d6.want
 
 -- usage.want --
 usage: gtdo do NR [NR ...]
+-- dlist.want --
+2 notice the sunflowers
+4 remove1
+5 remove2
+6 remove3
+7 remove4
+1 smell the uppercase Roses +flowers @outside
+3 stop
+--
+TODO: 7 of 7 tasks shown
 -- do7.txt --
 smell the uppercase Roses +flowers @outside
 notice the sunflowers

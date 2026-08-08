@@ -1,0 +1,51 @@
+# Port of t1340-listescapes.sh: listing tasks with embedded escape sequences.
+# Backslash sequences pass through literally; real ESC bytes pass through too.
+
+# aborted list output on backslash-c
+cp backslash.txt todo.txt
+exec gtdo ls
+cmp stdout le1.want
+
+exec gtdo ls 2
+cmp stdout le2.want
+
+# various escape sequences
+cp escapes.txt todo.txt
+exec gtdo ls
+cmp stdout le3.want
+
+# embedding of actual color sequence: the fixture holds a real ESC byte
+cp esc.txt todo.txt
+exec gtdo ls
+cmpenv stdout le4.want
+
+-- backslash.txt --
+first todo
+second todo run C:\WINDOWS\sysnative\cscript.exe
+third todo
+-- escapes.txt --
+first todo with \\, \a and \t
+second todo with \r\n line break
+third todo with \x42\x55\x47 and \033[0;31m color codes \033[0;30m
+-- esc.txt --
+A task with [0;31m actual color [0;30m
+-- le1.want --
+1 first todo
+2 second todo run C:\WINDOWS\sysnative\cscript.exe
+3 third todo
+--
+TODO: 3 of 3 tasks shown
+-- le2.want --
+2 second todo run C:\WINDOWS\sysnative\cscript.exe
+--
+TODO: 1 of 3 tasks shown
+-- le3.want --
+1 first todo with \\, \a and \t
+2 second todo with \r\n line break
+3 third todo with \x42\x55\x47 and \033[0;31m color codes \033[0;30m
+--
+TODO: 3 of 3 tasks shown
+-- le4.want --
+1 A task with $ESC[0;31m actual color $ESC[0;30m
+--
+TODO: 1 of 1 tasks shown

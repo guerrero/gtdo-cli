@@ -41,6 +41,14 @@ func resolveColors(c colorsTOML, plain bool) map[string]string {
 		}
 		roles[role] = resolveColor(m, value)
 	}
+	// default is todo.sh's DEFAULT, the reset emitted after every colored
+	// word: it is not a [colors] key, defaults to \033[0m, and is
+	// re-mappable through [colors.map] (t1330's customized highlighting).
+	if plain {
+		roles["default"] = ""
+	} else {
+		roles["default"] = m["default"]
+	}
 	return roles
 }
 

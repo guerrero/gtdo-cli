@@ -10,13 +10,14 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 // Colorer supplies the ANSI codes the colorizer applies: the config roles
 // color_done, color_project, color_context, color_date, color_number,
-// color_meta, and pri_<letter> with the pri_x fallback. A nil Colorer
-// disables colors (plain mode).
+// color_meta, "default" (the after-word reset), and pri_<letter> with the
+// pri_x fallback. A nil Colorer disables colors (plain mode).
 type Colorer interface {
 	Color(role string) string
 	PriorityColor(letter byte) string
@@ -79,6 +80,18 @@ func Format(tasks []Task, terms []string, opts FormatOptions) (lines []string, s
 	return lines, len(filtered), len(numbered), nil
 }
 
+// ListableCount mirrors TOTALTASKS: the number of lines the numbering
+// keeps — blank lines and lines of only digits and spaces are dropped.
+func ListableCount(tasks []Task) int {
+	n := 0
+	for _, task := range tasks {
+		if !allDigitSpaceRe.MatchString(task.Text) {
+			n++
+		}
+	}
+	return n
+}
+
 // autoWidth returns the highest line number among the tasks (the file's
 // line count, blank lines included).
 func autoWidth(tasks []Task) int {
@@ -91,16 +104,14 @@ func autoWidth(tasks []Task) int {
 	return maxLine
 }
 
-// reset is DEFAULT, todo.sh's \033[0m: emitted after every colored word
-// and at the end of a colored line.
-const reset = "\x1b[0m"
-
 // awkStep mirrors todo.sh's _format awk (§6.2.4): pick the line color from
 // the number prefix ("NN x " → color_done; "NN (X) " → pri_<X> with the
 // pri_x fallback), drop the "(X) " label under -P, then color the words —
 // the number, +projects, @contexts, valid dates, key:value metadata — with
 // a reset to DEFAULT plus the line color after each colored word, and a
-// final DEFAULT at the end of a colored line.
+// final DEFAULT at the end of a colored line. DEFAULT is the Colorer's
+// "default" role (todo.sh's DEFAULT env, t1330 overrides it to an
+// arbitrary string); a nil Colorer skips coloring entirely.
 func awkStep(line string, opts FormatOptions) string {
 	c := opts.Colors
 	clr := ""
@@ -122,6 +133,10 @@ func awkStep(line string, opts FormatOptions) string {
 	if c == nil {
 		return line
 	}
+	// reset is DEFAULT: the config's "default" role (todo.sh's DEFAULT
+	// env, \033[0m); in plain mode every role resolves to "", so the
+	// resets stay silent along with the colors.
+	reset := c.Color("default")
 	var b strings.Builder
 	b.WriteString(clr)
 	first := true
@@ -179,6 +194,39 @@ func hideSigils(line string, opts FormatOptions) string {
 		line = hideContextsRe.ReplaceAllString(line, "")
 	}
 	return line
+}
+
+// ListallPostFilter returns the post_filter_command of todo.sh's listall
+// (todo.sh:1338-1339): every numbered line keeps its number when it is at
+// most total (todo.txt's line count) and is renumbered 0 otherwise, both
+// right-aligned in width — the awk `$1 = sprintf(...)` that also rebuilds
+// each record, collapsing runs of spaces and tabs in the task text.
+func ListallPostFilter(total, width int) func([]string) ([]string, error) {
+	return func(lines []string) ([]string, error) {
+		for i, line := range lines {
+			fields := awkFields(line)
+			if len(fields) == 0 {
+				continue // unreachable: numbered lines always carry a number
+			}
+			n, _ := strconv.Atoi(fields[0])
+			if n > total {
+				n = 0
+			}
+			lines[i] = fmt.Sprintf("%*d %s", width, n, strings.Join(fields[1:], " "))
+		}
+		return lines, nil
+	}
+}
+
+// awkFields splits a numbered line the way awk's default field splitting
+// does: runs of spaces and tabs, with leading and trailing blanks ignored
+// (\r is not a separator, matching awk's FS in the C locale).
+func awkFields(line string) []string {
+	line = strings.Trim(line, " \t")
+	if line == "" {
+		return nil
+	}
+	return wsRunRe.Split(line, -1)
 }
 
 // Summary builds the tail of a listing (todo.sh's _list): the "--"

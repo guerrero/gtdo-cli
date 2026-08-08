@@ -62,14 +62,16 @@ func sortKey(line string) string {
 	return line[i:]
 }
 
-// foldASCII lowercases ASCII letters only, like `sort -f` under
-// LC_COLLATE=C; Unicode case folding would diverge from todo.sh for
-// non-ASCII text.
+// foldASCII uppercases ASCII letters only, like `sort -f` under
+// LC_COLLATE=C (fold lower case to upper case); Unicode case folding would
+// diverge from todo.sh for non-ASCII text. The direction matters against
+// punctuation: with uppercase folding a letter-bearing key sorts before
+// "[ \" ~", matching the local sort (t1100's backtick/tilde tasks).
 func foldASCII(s string) string {
 	b := []byte(s)
 	for i, c := range b {
-		if 'A' <= c && c <= 'Z' {
-			b[i] = c + 'a' - 'A'
+		if 'a' <= c && c <= 'z' {
+			b[i] = c - 'a' + 'A'
 		}
 	}
 	return string(b)

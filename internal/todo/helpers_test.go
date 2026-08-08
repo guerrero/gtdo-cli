@@ -71,6 +71,7 @@ var (
 		"pri_c":      "\x1b[1;34m",
 		"pri_x":      "\x1b[1;37m",
 		"color_done": "\x1b[0;37m",
+		"default":    "\x1b[0m",
 	}
 
 	// wordPalette: t1380's highlighting of numbers, dates, and metadata.
@@ -79,6 +80,7 @@ var (
 		"color_number": "\x1b[0;34m",
 		"color_date":   "\x1b[0;31m",
 		"color_meta":   "\x1b[0;32m",
+		"default":      "\x1b[0m",
 	}
 )
 

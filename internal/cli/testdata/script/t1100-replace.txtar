@@ -1,5 +1,5 @@
-# Port of t1100-replace.sh: replace functionality (list parts belong to
-# Task 8).
+# Port of t1100-replace.sh: replace functionality, including the list
+# sessions.
 
 # the shell test seeds todo.txt with `todo.sh add notice the daisies > /dev/null`
 cp daisies.txt todo.txt
@@ -10,8 +10,14 @@ cmp stderr usage.want
 exec gtdo replace 1 'smell the cows'
 cmp stdout r1.want
 
+exec gtdo list
+cmp stdout rlist1.want
+
 exec gtdo replace 1 smell the roses
 cmp stdout r2.want
+
+exec gtdo list
+cmp stdout rlist1b.want
 
 # replace error: fresh four-task file
 cp four.txt todo.txt
@@ -48,11 +54,11 @@ cp four.txt todo.txt
 exec gtdo replace 1 '~@#$%^&*()-_=+[{]}|;:''',<.>/?
 cmp stdout r10.want
 
-exec gtdo replace 2 '`!\\"'
+exec gtdo replace 2 '\`!\\"'
 cmp stdout r11.want
 
-exec cat todo.txt
-cmp stdout r12.want
+exec gtdo list
+cmp stdout rlist2.want
 
 # replace handling prepended date on add
 rm todo.txt
@@ -168,12 +174,22 @@ TODO: Replaced task with:
 -- r11.want --
 2 grow some corn
 TODO: Replaced task with:
-2 `!\\"
--- r12.want --
-~@#$%^&*()-_=+[{]}|;:',<.>/?
-`!\\"
-thrash some hay
-chase the chickens
+2 \`!\\"
+-- rlist1.want --
+1 smell the cows
+--
+TODO: 1 of 1 tasks shown
+-- rlist1b.want --
+1 smell the roses
+--
+TODO: 1 of 1 tasks shown
+-- rlist2.want --
+4 chase the chickens
+3 thrash some hay
+2 \`!\\"
+1 ~@#$%^&*()-_=+[{]}|;:',<.>/?
+--
+TODO: 4 of 4 tasks shown
 -- r13.want --
 1 2009-02-13 new task
 TODO: 1 added.

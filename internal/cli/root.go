@@ -77,6 +77,7 @@ func NewRootCmd(cfg *config.Config) *cobra.Command {
 	root.AddCommand(help)
 
 	registerActions(root, cfg)
+	registerListingActions(root, cfg)
 
 	return root
 }
