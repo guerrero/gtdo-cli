@@ -101,7 +101,10 @@ func writeLines(path string, lines []string, finalNL bool) error {
 		}
 		b.WriteString(line)
 	}
-	if finalNL && b.Len() > 0 {
+	// A single blank line still gets its newline: sed leaves "\n" when the
+	// last remaining line is blanked (e.g. preserve-mode del of the only
+	// line), so guard on the line count, not the builder length.
+	if finalNL && len(lines) > 0 {
 		b.WriteByte('\n')
 	}
 	return os.WriteFile(path, []byte(b.String()), 0o644)

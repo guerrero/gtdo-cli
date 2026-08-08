@@ -717,6 +717,26 @@ func TestDelPreserve(t *testing.T) {
 	}
 }
 
+// Preserve-mode del of the only line of a single-line file leaves a lone
+// blank line — sed -i.bak '1s/^.*//' on "one\n" gives "\n" — so the
+// next add lands on line 2, not line 1.
+func TestDelPreserveSingleLine(t *testing.T) {
+	s := newTestStore(t, "one\n")
+	if _, err := s.Del(1); err != nil {
+		t.Fatal(err)
+	}
+	if got := readFile(t, s.TodoFile); got != "\n" {
+		t.Errorf("todo.txt = %q, want %q", got, "\n")
+	}
+	line, _, err := s.Add("two", false, "", fixedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if line != 2 {
+		t.Errorf("Add after del = line %d, want 2", line)
+	}
+}
+
 func TestDelNotPreserve(t *testing.T) {
 	s := newTestStore(t, "one\ntwo\nthree\n")
 	s.PreserveLineNumbers = false
@@ -863,6 +883,19 @@ func TestMoveSrcMissing(t *testing.T) {
 	writeFile(t, s.DoneFile, "")
 	if _, _, err := s.Move(1, s.DoneFile, missing); err == nil || err.Error() != "TODO: Source file "+missing+" does not exist." {
 		t.Errorf("Move error = %v", err)
+	}
+}
+
+// The same lone-blank-line shape holds for preserve-mode move: the source
+// file becomes "\n" (t1850 sequence).
+func TestMovePreserveSingleLine(t *testing.T) {
+	s := newTestStore(t, "(A) notice the sunflowers\n")
+	writeFile(t, s.DoneFile, "")
+	if _, _, err := s.Move(1, s.DoneFile, s.TodoFile); err != nil {
+		t.Fatal(err)
+	}
+	if got := readFile(t, s.TodoFile); got != "\n" {
+		t.Errorf("todo.txt = %q, want %q", got, "\n")
 	}
 }
 
