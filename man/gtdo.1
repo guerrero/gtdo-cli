@@ -1,0 +1,229 @@
+.TH GTDO 1 "2026-08-08" "gtdo dev" "User Commands"
+.SH NAME
+gtdo \- a Go port of the todo.txt-cli (todo.sh) command line interface
+.SH SYNOPSIS
+.B gtdo
+.RI [ options ]
+.B action
+.RI [ task_number ]
+.RI [ task_description ]
+.SH DESCRIPTION
+.B gtdo
+is a Go port of
+.BR todo.txt-cli ,
+the todo.sh command line interface for maintaining todo lists in
+.IR todo.txt
+format: one task per line, optionally tagged with a priority
+.RI ((A) ),
+a creation date, and
+.B @context
+and
+.B +project
+tags.
+.PP
+Output, prompts, and exit codes match todo.sh byte for byte for the
+built-in actions. Configuration follows todo.sh: command line options,
+environment variables, and a configuration file.
+.PP
+Shell completion is built in: the
+.B completion
+command generates completion scripts for bash, zsh, fish, and powershell,
+and the actions complete task numbers and
+.B @context
+and
+.B +project
+tags from the current
+.IR todo.txt
+file.
+.SH COMMANDS
+.TP
+.B add
+Add a TODO item to todo.txt.
+.TP
+.B addm
+Add multiple TODO items to todo.txt.
+.TP
+.B addto
+Add a line of text to a file in the todo.txt directory.
+.TP
+.B append
+Append text to the task on line NR.
+.TP
+.B archive
+Move done tasks from todo.txt to done.txt and remove blank lines.
+.TP
+.B del
+Delete the task on line NR, or remove TERM from it.
+.TP
+.B depri
+Remove the priority from the task(s) on line NR.
+.TP
+.B do
+Mark task(s) on line NR as done.
+.TP
+.B help
+Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+.TP
+.B list
+Display all tasks in todo.txt.
+.TP
+.B listall
+Display all the lines in todo.txt AND done.txt.
+.TP
+.B listcon
+List all the task contexts that start with the @ sign in todo.txt.
+.TP
+.B listpri
+Display all tasks prioritized PRIORITIES.
+.TP
+.B listproj
+List all the projects (terms that start with a + sign) in todo.txt.
+.TP
+.B move
+Move a task from one file to another in the todo.txt directory.
+.TP
+.B prepend
+Prepend text to the task on line NR.
+.TP
+.B pri
+Add or replace the priority of the task on line NR.
+.TP
+.B replace
+Replace the task on line NR.
+.TP
+.B report
+Add the number of open and done tasks to report.txt.
+.TP
+.B shorthelp
+List the one-line usage of all built-in actions.
+
+.SH OPTIONS
+.TP
+.B \-@
+Hide context names in list output.  Use twice to show context names (default).
+.TP
+.B \-+
+Hide project names in list output.  Use twice to show project names (default).
+.TP
+.B \-c
+Color mode
+.TP
+.BI \-d " CONFIG_FILE"
+Use a configuration file other than one of the defaults
+.TP
+.B \-f
+Forces actions without confirmation or interactive input
+.TP
+.B \-h
+Display a short help message; same as action "shorthelp"
+.TP
+.B \-p
+Plain mode turns off colors
+.TP
+.B \-P
+Hide priority labels in list output.  Use twice to show priority labels (default).
+.TP
+.B \-a
+Don't auto-archive tasks automatically on completion
+.TP
+.B \-A
+Auto-archive tasks automatically on completion
+.TP
+.B \-n
+Don't preserve line numbers; automatically remove blank lines on task deletion
+.TP
+.B \-N
+Preserve line numbers
+.TP
+.B \-t
+Prepend the current date to a task automatically when it's added.
+.TP
+.B \-T
+Do not prepend the current date to a task automatically when it's added.
+.TP
+.B \-v
+Verbose mode turns on confirmation messages
+.TP
+.B \-vv
+Extra verbose mode prints some debugging information and additional help text
+.TP
+.B \-V
+Displays version and build information
+.TP
+.B \-x
+No-op; accepted for compatibility with todo.txt-cli
+.SH ENVIRONMENT
+.TP
+.B TODO_DIR
+Path to the directory that holds the todo files.
+.TP
+.B TODO_FILE
+Path to the todo.txt file.
+.TP
+.B DONE_FILE
+Path to the done.txt file.
+.TP
+.B REPORT_FILE
+Path to the report.txt file.
+.TP
+.B TODOTXT_AUTO_ARCHIVE
+Same as option \-a (0) or \-A (1).
+.TP
+.B TODOTXT_FORCE=1
+Same as option \-f.
+.TP
+.B TODOTXT_PRESERVE_LINE_NUMBERS
+Same as option \-n (0) or \-N (1).
+.TP
+.B TODOTXT_PLAIN
+Same as option \-p (1) or \-c (0).
+.TP
+.B TODOTXT_DATE_ON_ADD
+Same as option \-t (1) or \-T (0).
+.TP
+.B TODOTXT_PRIORITY_ON_ADD=pri
+Default priority A\-Z.
+.TP
+.B TODOTXT_VERBOSE=1
+Same as option \-v.
+.TP
+.B TODOTXT_DEFAULT_ACTION=""
+Run this when called with no arguments.
+.TP
+.B TODOTXT_SOURCEVAR=$DONE_FILE
+Use another source for listcon, listproj.
+.TP
+.B SENTENCE_DELIMITERS=,.:;
+Suppress the added space in append.
+.SH FILES
+.TP
+.I $TODO_DIR/todo.txt
+The active todo list; defaults to
+.IR ~/todo.txt .
+.TP
+.I $TODO_DIR/done.txt
+Completed tasks; defaults to
+.IR ~/done.txt .
+.TP
+.I $TODO_DIR/report.txt
+The report output; defaults to
+.IR ~/report.txt .
+.TP
+.I ~/.config/gtdo/config.toml
+User configuration, searched after the
+.B \-d
+option and
+.BR $GTDO_CONFIG ,
+before
+.IR /etc/gtdo/config.toml .
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Generic error: usage errors, unknown actions, and action failures.
+.SH SEE ALSO
+The todo.txt format: https://github.com/todotxt/todo.txt
+.PP
+The todo.txt-cli project: https://github.com/todotxt/todo.txt-cli
