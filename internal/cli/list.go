@@ -26,9 +26,10 @@ import (
 func registerListingActions(root *cobra.Command, cfg *config.Config) {
 	add := func(spec actionSpec) { root.AddCommand(newAction(spec, cfg)) }
 	add(actionSpec{
-		use:     "list [TERM...]",
-		aliases: []string{"ls"},
-		short:   "Display all tasks in todo.txt.",
+		use:       "list [TERM...]",
+		aliases:   []string{"ls"},
+		short:     "Display all tasks in todo.txt.",
+		validArgs: termCompletions(cfg),
 		long: "Displays all tasks that contain TERM(s) sorted by priority with line\n" +
 			"numbers.  Each task must match all TERM(s) (logical AND); to display\n" +
 			"tasks that contain any TERM (logical OR), use 'TERM1\\|TERM2' (quoted).\n" +
@@ -39,9 +40,10 @@ func registerListingActions(root *cobra.Command, cfg *config.Config) {
 		run: actionList,
 	})
 	add(actionSpec{
-		use:     "listall [TERM...]",
-		aliases: []string{"lsa"},
-		short:   "Display all the lines in todo.txt AND done.txt.",
+		use:       "listall [TERM...]",
+		aliases:   []string{"lsa"},
+		short:     "Display all the lines in todo.txt AND done.txt.",
+		validArgs: termCompletions(cfg),
 		long: "Displays all the lines in todo.txt AND done.txt that contain TERM(s)\n" +
 			"sorted by priority with line numbers.  Hides all tasks that\n" +
 			"contain TERM(s) preceded by a minus sign (i.e. -TERM).  If no\n" +

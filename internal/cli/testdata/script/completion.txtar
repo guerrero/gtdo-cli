@@ -1,0 +1,103 @@
+# Shell completion (§6.6): the cobra completion command is enabled but
+# hidden (help.txtar and shorthelp.txtar pin that it never surfaces), and
+# the NR-taking actions complete task numbers while list/listall complete
+# @contexts and +projects, both from the current TODO_FILE. The todo.txt
+# fixture has a blank line 3, which the numbering drops: numbers offered
+# are 1, 2, 4.
+
+# The completion command generates scripts for bash and fish on demand.
+exec gtdo completion bash
+stdout '^# bash completion V2 for gtdo'
+stdout '__complete'
+
+exec gtdo completion fish
+stdout '^function __gtdo_debug'
+stdout '__complete'
+
+# list completes @contexts and +projects; the typed sigil picks the kind.
+exec gtdo __complete list @
+cmp stdout list-at.want
+cmp stderr list-at.err
+
+exec gtdo __complete list +
+cmp stdout list-plus.want
+
+# listall completes the same words from the same file.
+exec gtdo __complete listall @
+cmp stdout list-at.want
+
+# The NR-taking actions complete the numbers `list` shows, filtered by
+# the typed prefix: the fixture's listable lines are 1, 2, 4 (blank
+# line 3 is dropped by the numbering, so it is never offered).
+exec gtdo __complete do 1
+cmp stdout do-1.want
+
+exec gtdo __complete do 2
+cmp stdout do-2.want
+
+exec gtdo __complete do 4
+cmp stdout do-4.want
+
+exec gtdo __complete do 3
+cmp stdout do-none.want
+
+exec gtdo __complete depri 4
+cmp stdout do-4.want
+
+exec gtdo __complete del 1
+cmp stdout do-1.want
+
+exec gtdo __complete move 1
+cmp stdout do-1.want
+
+# append's NR is its first argument; later positions are text, not
+# numbers, so nothing is offered (the directive line alone remains).
+exec gtdo __complete append 1 x
+cmp stdout append-text.want
+
+# The completion command is hidden: help does not know it.
+! exec gtdo help completion
+stdout '^$'
+stderr '^TODO: No action "completion" exists\.$'
+
+# A missing TODO_FILE yields no completions and creates no files:
+# completions must never fail the command or materialize state.
+env TODO_FILE=missing.txt
+exec gtdo __complete list @
+cmp stdout missing.want
+! exists missing.txt
+
+-- todo.txt --
+(A) Call Mom @phone +Family
+(B) Plan vacation +Family @travel
+
+x 2009-02-13 done task +Archive
+
+-- done.txt --
+x 2009-01-01 old done task
+
+-- list-at.want --
+@phone
+@travel
+:4
+-- list-at.err --
+Completion ended with directive: ShellCompDirectiveNoFileComp
+-- list-plus.want --
++Archive
++Family
+:4
+-- do-1.want --
+1
+:4
+-- do-2.want --
+2
+:4
+-- do-4.want --
+4
+:4
+-- do-none.want --
+:4
+-- append-text.want --
+:4
+-- missing.want --
+:4

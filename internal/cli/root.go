@@ -31,9 +31,11 @@ func NewRootCmd(cfg *config.Config) *cobra.Command {
 		// neither, not even for errors returned by action RunEs.
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		// The default completion command is cobra's, not gtdo's; Task 10
-		// wires completion deliberately.
-		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
+		// The default completion command is cobra's, not gtdo's (§6.6): it
+		// stays hidden so gtdo's own help and shorthelp keep listing only
+		// the built-in actions, but its scripts and the __complete helper
+		// are wired and work.
+		CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
 	}
 
 	shorthelp := newAction(actionSpec{
@@ -90,7 +92,11 @@ type actionSpec struct {
 	aliases []string // todo.sh aliases, e.g. ["a"]; extra usage lines in help blocks
 	short   string   // one-line description for shorthelp's action list
 	long    string   // block description for help [ACTION]
-	run     func(cmd *cobra.Command, args []string, cfg *config.Config) error
+	// validArgs completes the action's positional arguments (§6.6); nil
+	// commands get no completion function. It is built from the resolved
+	// config like run.
+	validArgs cobra.CompletionFunc
+	run       func(cmd *cobra.Command, args []string, cfg *config.Config) error
 }
 
 // newAction turns an actionSpec into a cobra command with gtdo's shared
@@ -105,6 +111,7 @@ func newAction(spec actionSpec, cfg *config.Config) *cobra.Command {
 		Aliases:            spec.aliases,
 		Short:              spec.short,
 		Long:               spec.long,
+		ValidArgsFunction:  spec.validArgs,
 		DisableFlagParsing: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
@@ -119,9 +126,17 @@ func newAction(spec actionSpec, cfg *config.Config) *cobra.Command {
 // prints the usage text to stdout and fails with exit code 1, exactly like
 // todo.sh's `*) usage;;` case.
 func Execute(root *cobra.Command, action string, rest []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	if child, _, _ := root.Find([]string{action}); child == root {
-		fmt.Fprint(stdout, UsageString())
-		return exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
+	// The completion commands are cobra's, registered only during Execute
+	// (initCompleteCmd and InitDefaultCompletionCmd), so the action check
+	// below cannot see them: let cobra handle them like the actions. The
+	// names are cobra's own (completion, __complete, __completeNoDesc).
+	isCompletion := action == "completion" ||
+		action == cobra.ShellCompRequestCmd || action == cobra.ShellCompNoDescRequestCmd
+	if !isCompletion {
+		if child, _, _ := root.Find([]string{action}); child == root {
+			fmt.Fprint(stdout, UsageString())
+			return exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
+		}
 	}
 	root.SetArgs(append([]string{action}, rest...))
 	root.SetIn(stdin)

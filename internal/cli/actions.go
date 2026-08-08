@@ -50,11 +50,12 @@ func registerActions(root *cobra.Command, cfg *config.Config) {
 		run:   actionAddto,
 	})
 	add(actionSpec{
-		use:     `append NR "TEXT TO APPEND"`,
-		aliases: []string{"app"},
-		short:   "Append text to the task on line NR.",
-		long:    "Adds TEXT TO APPEND to the end of the task on line NR.\nQuotes optional.",
-		run:     actionAppend,
+		use:       `append NR "TEXT TO APPEND"`,
+		aliases:   []string{"app"},
+		short:     "Append text to the task on line NR.",
+		validArgs: firstArgNumbers(cfg),
+		long:      "Adds TEXT TO APPEND to the end of the task on line NR.\nQuotes optional.",
+		run:       actionAppend,
 	})
 	add(actionSpec{
 		use:   "archive",
@@ -63,52 +64,59 @@ func registerActions(root *cobra.Command, cfg *config.Config) {
 		run:   actionArchive,
 	})
 	add(actionSpec{
-		use:     "del NR [TERM]",
-		aliases: []string{"rm"},
-		short:   "Delete the task on line NR, or remove TERM from it.",
-		long:    "Deletes the task on line NR in todo.txt.\nIf TERM specified, deletes only TERM from the task.",
-		run:     actionDel,
+		use:       "del NR [TERM]",
+		aliases:   []string{"rm"},
+		short:     "Delete the task on line NR, or remove TERM from it.",
+		validArgs: firstArgNumbers(cfg),
+		long:      "Deletes the task on line NR in todo.txt.\nIf TERM specified, deletes only TERM from the task.",
+		run:       actionDel,
 	})
 	add(actionSpec{
-		use:     "depri NR [NR ...]",
-		aliases: []string{"dp"},
-		short:   "Remove the priority from the task(s) on line NR.",
-		long:    "Deprioritizes (removes the priority) from the task(s) on line NR in todo.txt.",
-		run:     actionDepri,
+		use:       "depri NR [NR ...]",
+		aliases:   []string{"dp"},
+		short:     "Remove the priority from the task(s) on line NR.",
+		validArgs: everyArgNumbers(cfg),
+		long:      "Deprioritizes (removes the priority) from the task(s) on line NR in todo.txt.",
+		run:       actionDepri,
 	})
 	add(actionSpec{
-		use:     "do NR [NR ...]",
-		aliases: []string{"done"},
-		short:   "Mark task(s) on line NR as done.",
-		long:    "Marks task(s) on line NR as done in todo.txt.",
-		run:     actionDo,
+		use:       "do NR [NR ...]",
+		aliases:   []string{"done"},
+		short:     "Mark task(s) on line NR as done.",
+		validArgs: everyArgNumbers(cfg),
+		long:      "Marks task(s) on line NR as done in todo.txt.",
+		run:       actionDo,
 	})
 	add(actionSpec{
-		use:     "move NR DEST [SRC]",
-		aliases: []string{"mv"},
-		short:   "Move a task from one file to another in the todo.txt directory.",
-		long:    "Moves the line NR from source text file (SRC) to destination text file (DEST).\nBoth source and destination file must be located in the directory defined in the\nconfiguration directory.  When SRC is not defined it's by default todo.txt.",
-		run:     actionMove,
+		use:       "move NR DEST [SRC]",
+		aliases:   []string{"mv"},
+		short:     "Move a task from one file to another in the todo.txt directory.",
+		validArgs: firstArgNumbers(cfg),
+		long:      "Moves the line NR from source text file (SRC) to destination text file (DEST).\nBoth source and destination file must be located in the directory defined in the\nconfiguration directory.  When SRC is not defined it's by default todo.txt.",
+		run:       actionMove,
 	})
 	add(actionSpec{
-		use:     `prepend NR "TEXT TO PREPEND"`,
-		aliases: []string{"prep"},
-		short:   "Prepend text to the task on line NR.",
-		long:    "Adds TEXT TO PREPEND to the beginning of the task on line NR.\nQuotes optional.",
-		run:     actionPrepend,
+		use:       `prepend NR "TEXT TO PREPEND"`,
+		aliases:   []string{"prep"},
+		short:     "Prepend text to the task on line NR.",
+		validArgs: firstArgNumbers(cfg),
+		long:      "Adds TEXT TO PREPEND to the beginning of the task on line NR.\nQuotes optional.",
+		run:       actionPrepend,
 	})
 	add(actionSpec{
-		use:     "pri NR PRIORITY [NR PRIORITY ...]",
-		aliases: []string{"p"},
-		short:   "Add or replace the priority of the task on line NR.",
-		long:    "Adds PRIORITY to task on line NR.  If the task is already prioritized,\nreplaces current priority with new PRIORITY.\nPRIORITY must be a letter between A and Z.",
-		run:     actionPri,
+		use:       "pri NR PRIORITY [NR PRIORITY ...]",
+		aliases:   []string{"p"},
+		short:     "Add or replace the priority of the task on line NR.",
+		validArgs: evenArgNumbers(cfg),
+		long:      "Adds PRIORITY to task on line NR.  If the task is already prioritized,\nreplaces current priority with new PRIORITY.\nPRIORITY must be a letter between A and Z.",
+		run:       actionPri,
 	})
 	add(actionSpec{
-		use:   `replace NR "UPDATED TODO"`,
-		short: "Replace the task on line NR.",
-		long:  "Replaces task on line NR with UPDATED TODO.",
-		run:   actionReplace,
+		use:       `replace NR "UPDATED TODO"`,
+		short:     "Replace the task on line NR.",
+		validArgs: firstArgNumbers(cfg),
+		long:      "Replaces task on line NR with UPDATED TODO.",
+		run:       actionReplace,
 	})
 	add(actionSpec{
 		use:   "report",
