@@ -64,7 +64,8 @@ func FilterLines(lines, terms []string) ([]string, error) {
 // while RE2 treats the bare characters as operators — so bare characters
 // are escaped and escaped operators unescaped. Escapes both engines share
 // (\. \* \\ \b \w \s \d \t \n and friends, matching the local grep) pass
-// through unchanged; a backslash before any other character is dropped,
+// through unchanged; grep's \< and \> word-boundary operators become \b
+// (RE2 has no \< \> escapes); a backslash before any other character is dropped,
 // because grep treats it as that literal character (verified with the
 // system grep). grep's \1..\9 backreferences have no RE2 equivalent and
 // approximate as the literal digit (plan §10).
@@ -81,7 +82,11 @@ func translateBRE(term string) string {
 			switch n {
 			case '(', ')', '|', '+', '?', '{', '}':
 				b.WriteByte(n) // BRE operator → RE2 operator
-			case 'b', 'B', '<', '>', 'w', 'W', 's', 'S', 'd', 'D',
+			case '<', '>':
+				// grep's word-boundary operators; RE2 spells both \b (a
+				// boundary is symmetric, so start/end-of-word coincide)
+				b.WriteString(`\b`)
+			case 'b', 'B', 'w', 'W', 's', 'S', 'd', 'D',
 				't', 'n', 'r', 'f', 'v', 'a', 'x',
 				'.', '*', '\\', '[', ']', '^', '$':
 				b.WriteByte(c)

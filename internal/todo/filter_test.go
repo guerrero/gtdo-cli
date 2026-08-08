@@ -183,6 +183,40 @@ func TestFilterLinesBREOperators(t *testing.T) {
 	}
 }
 
+// grep's \< and \> are word-boundary operators, not literal < and >; RE2
+// has no \< \> escapes, so they translate to \b. Pinned against the system
+// grep: '\<foo' matches foo, foobar, <foo, foo>, foobarfoo (foo at a word
+// start); 'foo\>' matches foo, <foo, barfoo, foo>, foobarfoo (foo at a word
+// end); '\<foo\>' matches only the whole-word lines.
+func TestFilterLinesWordBoundaries(t *testing.T) {
+	lines := []string{
+		"1 foo",
+		"2 foobar",
+		"3 <foo",
+		"4 barfoo",
+		"5 foo>",
+		"6 foobarfoo",
+	}
+	cases := []struct {
+		term string
+		want []string
+	}{
+		{"\\<foo", []string{lines[0], lines[1], lines[2], lines[4], lines[5]}},
+		{"foo\\>", []string{lines[0], lines[2], lines[3], lines[4], lines[5]}},
+		{"\\<foo\\>", []string{lines[0], lines[2], lines[4]}},
+	}
+	for _, c := range cases {
+		got, err := FilterLines(lines, []string{c.term})
+		if err != nil {
+			t.Errorf("term %q: %v", c.term, err)
+			continue
+		}
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("FilterLines(lines, [%q]) = %v, want %v", c.term, got, c.want)
+		}
+	}
+}
+
 // A malformed term is an error, like grep reporting an unmatched bracket.
 func TestFilterLinesInvalidTerm(t *testing.T) {
 	if _, err := FilterLines([]string{"1 foo"}, []string{"["}); err == nil {
