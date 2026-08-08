@@ -1,0 +1,94 @@
+# help with no arguments prints the full help: usage, options, and the
+# per-action blocks of every registered action.
+exec gtdo help
+cmp stdout help.want
+
+# help ACTION prints that action's help block, blank-line terminated.
+exec gtdo help shorthelp
+cmp stdout help-shorthelp.want
+
+exec gtdo help help
+cmp stdout help-help.want
+
+# Several actions print each block in order.
+exec gtdo help help shorthelp
+cmp stdout help-two.want
+
+# An unknown action is an error on stderr with exit 1; stdout stays empty.
+! exec gtdo help bogus
+stdout '^$'
+stderr '^TODO: No action "bogus" exists\.$'
+
+# Known blocks print before the error, and nothing runs after it.
+! exec gtdo help shorthelp bogus
+stdout '^    shorthelp'
+stderr '^TODO: No action "bogus" exists\.$'
+
+# --help after the action is a positional argument, not a flag: the help
+# query fails like any unknown action (todo.sh has no long options).
+! exec gtdo help --help
+stderr '^TODO: No action "--help" exists\.$'
+
+-- help.want --
+  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+
+  Options:
+    -@
+        Hide context names in list output.  Use twice to show context names (default).
+    -+
+        Hide project names in list output.  Use twice to show project names (default).
+    -c
+        Color mode
+    -d CONFIG_FILE
+        Use a configuration file other than one of the defaults
+    -f
+        Forces actions without confirmation or interactive input
+    -h
+        Display a short help message; same as action "shorthelp"
+    -p
+        Plain mode turns off colors
+    -P
+        Hide priority labels in list output.  Use twice to show priority labels (default).
+    -a
+        Don't auto-archive tasks automatically on completion
+    -A
+        Auto-archive tasks automatically on completion
+    -n
+        Don't preserve line numbers; automatically remove blank lines on task deletion
+    -N
+        Preserve line numbers
+    -t
+        Prepend the current date to a task automatically when it's added.
+    -T
+        Do not prepend the current date to a task automatically when it's added.
+    -v
+        Verbose mode turns on confirmation messages
+    -vv
+        Extra verbose mode prints some debugging information and additional help text
+    -V
+        Displays version and build information
+    -x
+        No-op; accepted for compatibility with todo.txt-cli
+
+  Built-in Actions:
+    help [ACTION...]
+      Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+
+    shorthelp
+      List the one-line usage of all built-in actions.
+
+-- help-shorthelp.want --
+    shorthelp
+      List the one-line usage of all built-in actions.
+
+-- help-help.want --
+    help [ACTION...]
+      Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+
+-- help-two.want --
+    help [ACTION...]
+      Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+
+    shorthelp
+      List the one-line usage of all built-in actions.
+

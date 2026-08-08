@@ -15,57 +15,91 @@ func TestPreparse(t *testing.T) {
 		check  func(t *testing.T, o *config.Options)
 	}{
 		{"no args", nil, "", nil, nil},
-		{"plain before action", []string{"-p", "list", "foo"}, "list", []string{"foo"},
+		{
+			"plain before action",
+			[]string{"-p", "list", "foo"},
+			"list",
+			[]string{"foo"},
 			func(t *testing.T, o *config.Options) {
 				if !o.Plain || !o.PlainSet {
 					t.Error("plain not set")
 				}
-			}},
+			},
+		},
 		{"flag after action is positional", []string{"list", "-p"}, "list", []string{"-p"}, nil},
-		{"cluster", []string{"-npf", "del", "2"}, "del", []string{"2"},
+		{
+			"cluster",
+			[]string{"-npf", "del", "2"},
+			"del",
+			[]string{"2"},
 			func(t *testing.T, o *config.Options) {
 				if o.Preserve || !o.PreserveSet || !o.Force || !o.ForceSet || !o.Plain || !o.PlainSet {
 					t.Error("cluster flags not applied")
 				}
-			}},
-		{"counters", []string{"-vv", "list"}, "list", nil,
+			},
+		},
+		{
+			"counters",
+			[]string{"-vv", "list"},
+			"list", nil,
 			func(t *testing.T, o *config.Options) {
 				if o.VerboseCount != 2 {
 					t.Error("want 2 -v")
 				}
-			}},
-		{"toggles odd", []string{"-@", "-+", "-P", "list"}, "list", nil,
+			},
+		},
+		{
+			"toggles odd",
+			[]string{"-@", "-+", "-P", "list"},
+			"list", nil,
 			func(t *testing.T, o *config.Options) {
 				if !o.HideContexts || !o.HideProjects || !o.HidePriority {
 					t.Error("odd toggles should hide")
 				}
-			}},
-		{"toggles even", []string{"-@", "-@", "list"}, "list", nil,
+			},
+		},
+		{
+			"toggles even",
+			[]string{"-@", "-@", "list"},
+			"list", nil,
 			func(t *testing.T, o *config.Options) {
 				if o.HideContexts {
 					t.Error("even toggles should show")
 				}
-			}},
-		{"d with separate arg", []string{"-d", "cfg.toml", "list"}, "list", nil,
+			},
+		},
+		{
+			"d with separate arg",
+			[]string{"-d", "cfg.toml", "list"},
+			"list", nil,
 			func(t *testing.T, o *config.Options) {
 				if o.ConfigPath != "cfg.toml" {
 					t.Error("config path")
 				}
-			}},
-		{"d in cluster", []string{"-Pd", "cfg.toml", "list"}, "list", nil,
+			},
+		},
+		{
+			"d in cluster",
+			[]string{"-Pd", "cfg.toml", "list"},
+			"list", nil,
 			func(t *testing.T, o *config.Options) {
 				if o.ConfigPath != "cfg.toml" || !o.HidePriority {
 					t.Error("cluster -d")
 				}
-			}},
-		{"d missing arg", []string{"-d"}, "", nil, func(t *testing.T, o *config.Options) {}},
+			},
+		},
+		{"d missing arg", []string{"-d"}, "", nil, func(_ *testing.T, _ *config.Options) {}},
 		{"h short-circuits", []string{"-h", "-d", "x", "bogus"}, "shorthelp", nil, nil},
-		{"V short-circuits", []string{"-V", "list"}, "", nil,
+		{
+			"V short-circuits",
+			[]string{"-V", "list"},
+			"", nil,
 			func(t *testing.T, o *config.Options) {
 				if !o.Version {
 					t.Error("version flag")
 				}
-			}},
+			},
+		},
 		{"unknown flag", []string{"-q", "list"}, "", nil, nil},
 		{"double dash", []string{"--", "-p"}, "-p", nil, nil},
 		{"lone dash is action", []string{"-"}, "-", nil, nil},

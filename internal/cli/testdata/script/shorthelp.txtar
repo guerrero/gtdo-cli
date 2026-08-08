@@ -1,0 +1,21 @@
+# -h prints the short help: usage line, one-line action list, footer. Exit 0.
+exec gtdo -h
+cmp stdout shorthelp.want
+
+# shorthelp also runs as an action, like todo.sh.
+exec gtdo shorthelp
+cmp stdout shorthelp.want
+
+# -h discards every remaining argument, mirroring todo.sh's
+# set -- '-h' 'shorthelp'.
+exec gtdo -h -d config.toml bogus
+cmp stdout shorthelp.want
+
+-- shorthelp.want --
+  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+
+  Actions:
+    help  Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+    shorthelp  List the one-line usage of all built-in actions.
+
+  See "help" for more details.

@@ -1,0 +1,27 @@
+# TODOTXT_DEFAULT_ACTION runs when no action is given (§6.5).
+env TODOTXT_DEFAULT_ACTION=shorthelp
+exec gtdo
+cmp stdout shorthelp.want
+
+# An explicit action wins over the default.
+! exec gtdo bogus
+stdout '^Usage: gtdo \[-fhpantvV\]'
+
+# An unknown default action is a usage error like any unknown action.
+env TODOTXT_DEFAULT_ACTION=bogus
+! exec gtdo
+stdout '^Usage: gtdo \[-fhpantvV\]'
+
+# -V short-circuits before config resolution, so a bad default action
+# does not matter.
+exec gtdo -V
+stdout '^gtdo dev'
+
+-- shorthelp.want --
+  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+
+  Actions:
+    help  Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+    shorthelp  List the one-line usage of all built-in actions.
+
+  See "help" for more details.

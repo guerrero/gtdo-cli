@@ -1,0 +1,20 @@
+# default_action also comes from the TOML config file via -d.
+exec gtdo -d default-action.toml
+cmp stdout shorthelp.want
+
+# The explicit action still wins over the configured default.
+! exec gtdo -d default-action.toml bogus
+stdout '^Usage: gtdo \[-fhpantvV\]'
+
+-- default-action.toml --
+[behavior]
+default_action = "shorthelp"
+
+-- shorthelp.want --
+  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+
+  Actions:
+    help  Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+    shorthelp  List the one-line usage of all built-in actions.
+
+  See "help" for more details.
