@@ -271,12 +271,14 @@ func TestFormatHideSigils(t *testing.T) {
 	}
 }
 
-// -P removes the priority label after the line color was chosen, and the
-// sed pass also strips mid-text "(X) " labels (t1300).
+// -P removes the line-initial priority label after the line color was
+// chosen (awkStep's splice); mid-text and done-line "(X) " labels stay,
+// verified against the real todo.sh (t1300).
 func TestFormatHidePriority(t *testing.T) {
 	tasks := tasksFromTexts(
 		"(A) @con01 +prj01 -- Some project 01 task, pri A",
 		"(A) foo (B) bar",
+		"x (A) foo",
 	)
 	lines, _, _, err := Format(tasks, nil, FormatOptions{Colors: testColors{defaultPalette}, HidePriority: true})
 	if err != nil {
@@ -284,7 +286,8 @@ func TestFormatHidePriority(t *testing.T) {
 	}
 	want := []string{
 		"\x1b[1;33m1 @con01 +prj01 -- Some project 01 task, pri A\x1b[0m",
-		"\x1b[1;33m2 foo bar\x1b[0m",
+		"\x1b[1;33m2 foo (B) bar\x1b[0m",
+		"\x1b[0;37m3 x (A) foo\x1b[0m",
 	}
 	if !reflect.DeepEqual(lines, want) {
 		t.Errorf("HidePriority = %q, want %q", lines, want)

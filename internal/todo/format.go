@@ -167,18 +167,16 @@ func splitWords(line string) []string {
 	return append(out, line[start:])
 }
 
-// hideSigils applies the -@/-+/-P substitutions todo.sh runs on the
-// colorized lines: a sigil word (with its preceding space) or a "(X) "
-// label is removed.
+// hideSigils applies the -@/-+ substitutions todo.sh runs on the
+// colorized lines: a sigil word and its preceding space is removed. -P is
+// not here: awkStep's splice is the complete todo.sh behavior, which keeps
+// mid-text and done-line "(X) " labels.
 func hideSigils(line string, opts FormatOptions) string {
 	if opts.HideProjects {
 		line = hideProjectsRe.ReplaceAllString(line, "")
 	}
 	if opts.HideContexts {
 		line = hideContextsRe.ReplaceAllString(line, "")
-	}
-	if opts.HidePriority {
-		line = hidePriorityRe.ReplaceAllString(line, "")
 	}
 	return line
 }
@@ -217,12 +215,10 @@ var (
 	dateWordRe   = regexp.MustCompile(`^(19|20)[0-9][0-9]-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$`)
 	metaWordRe   = regexp.MustCompile(`^[A-Za-z0-9]+:[^ ]+$`)
 
-	// The -@/-+/-P substitutions: [[:space:]][+][[:graph:]]\{1,\},
-	// [[:space:]]@[[:graph:]]\{1,\}, and ([A-Z])[[:space:]] (the parens
-	// are literal in sed BRE).
+	// The -@/-+ substitutions: [[:space:]][+][[:graph:]]\{1,\} and
+	// [[:space:]]@[[:graph:]]\{1,\} (the parens are literal in sed BRE).
 	hideProjectsRe = regexp.MustCompile(`[[:space:]][+][[:graph:]]+`)
 	hideContextsRe = regexp.MustCompile(`[[:space:]]@[[:graph:]]+`)
-	hidePriorityRe = regexp.MustCompile(`\([A-Z]\)[[:space:]]`)
 
 	wsRunRe = regexp.MustCompile(`[ \t]+`)
 )
