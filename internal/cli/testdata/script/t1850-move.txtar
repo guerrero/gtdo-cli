@@ -1,0 +1,59 @@
+# Port of t1850-move.sh: move functionality. The shell test pipes the
+# transcript through sed to strip the home paths from the confirmation
+# prompt; gtdo suppresses the prompt itself because the harness stdin is
+# not a terminal (like bash read -p with piped stdin). The ls/listfile
+# parts belong to Task 8; file states are checked with cat.
+
+cp move2.txt todo.txt
+cp move2done.txt done.txt
+exec gtdo -f move 1 done.txt
+cmp stdout m1.want
+
+# basic move with confirmation
+cp move2.txt todo.txt
+cp move2done.txt done.txt
+stdin y.txt
+exec gtdo move 1 done.txt
+cmp stdout m2.want
+
+# basic move with passed source
+cp move2.txt todo.txt
+cp move2done.txt done.txt
+exec gtdo -f move 2 todo.txt done.txt
+cmp stdout m3.want
+
+exec cat todo.txt
+cmp stdout m4.want
+
+exec cat done.txt
+cmp stdout m5.want
+
+# move to destination without EOL: covered in the Go test
+# (noeol_test.go) — a txtar section cannot hold a file without a
+# trailing newline.
+
+-- move2.txt --
+(B) smell the uppercase Roses +flowers @outside
+(A) notice the sunflowers
+-- move2done.txt --
+x 2009-02-13 make the coffee +wakeup
+x 2009-02-13 smell the coffee +wakeup
+-- y.txt --
+y
+-- m1.want --
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: 1 moved to 3 in DONE.
+-- m2.want --
+
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: 1 moved to 3 in DONE.
+-- m3.want --
+2 x 2009-02-13 smell the coffee +wakeup
+DONE: 2 moved to 3 in TODO.
+-- m4.want --
+(B) smell the uppercase Roses +flowers @outside
+(A) notice the sunflowers
+x 2009-02-13 smell the coffee +wakeup
+-- m5.want --
+x 2009-02-13 make the coffee +wakeup
+

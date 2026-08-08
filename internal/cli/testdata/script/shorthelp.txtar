@@ -15,7 +15,20 @@ cmp stdout shorthelp.want
   Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
 
   Actions:
+    add  Add a TODO item to todo.txt.
+    addm  Add multiple TODO items to todo.txt.
+    addto  Add a line of text to a file in the todo.txt directory.
+    append  Append text to the task on line NR.
+    archive  Move done tasks from todo.txt to done.txt and remove blank lines.
+    del  Delete the task on line NR, or remove TERM from it.
+    depri  Remove the priority from the task(s) on line NR.
+    do  Mark task(s) on line NR as done.
     help  Display help about usage, options and built-in actions, or just the usage help for the passed ACTION(s).
+    move  Move a task from one file to another in the todo.txt directory.
+    prepend  Prepend text to the task on line NR.
+    pri  Add or replace the priority of the task on line NR.
+    replace  Replace the task on line NR.
+    report  Add the number of open and done tasks to report.txt.
     shorthelp  List the one-line usage of all built-in actions.
 
   See "help" for more details.

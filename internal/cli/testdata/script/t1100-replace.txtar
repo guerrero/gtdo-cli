@@ -1,0 +1,218 @@
+# Port of t1100-replace.sh: replace functionality (list parts belong to
+# Task 8).
+
+# the shell test seeds todo.txt with `todo.sh add notice the daisies > /dev/null`
+cp daisies.txt todo.txt
+
+! exec gtdo replace adf asdfa
+cmp stderr usage.want
+
+exec gtdo replace 1 'smell the cows'
+cmp stdout r1.want
+
+exec gtdo replace 1 smell the roses
+cmp stdout r2.want
+
+# replace error: fresh four-task file
+cp four.txt todo.txt
+! exec gtdo replace 10 'hej!'
+cmp stderr notask.want
+
+exec gtdo replace 1 smell the cheese
+cmp stdout r3.want
+
+exec gtdo replace 3 jump on hay
+cmp stdout r4.want
+
+exec gtdo replace 4 collect the eggs
+cmp stdout r5.want
+
+# replace with priority
+cp aprio.txt todo.txt
+exec gtdo replace 1 'collect the bread'
+cmp stdout r6.want
+
+exec gtdo replace 1 collect the eggs
+cmp stdout r7.want
+
+# replace with &, spaces, symbols
+cp hay.txt todo.txt
+exec gtdo replace 1 'thrash the hay & thrash the wheat'
+cmp stdout r8.want
+
+cp hay.txt todo.txt
+exec gtdo replace 1 'notice the   three   spaces'
+cmp stdout r9.want
+
+cp four.txt todo.txt
+exec gtdo replace 1 '~@#$%^&*()-_=+[{]}|;:''',<.>/?
+cmp stdout r10.want
+
+exec gtdo replace 2 '`!\\"'
+cmp stdout r11.want
+
+exec cat todo.txt
+cmp stdout r12.want
+
+# replace handling prepended date on add
+rm todo.txt
+exec gtdo -t add 'new task'
+cmp stdout r13.want
+
+exec gtdo replace 1 this is just a new one
+cmp stdout r14.want
+
+exec gtdo replace 1 2010-07-04 this also has a new date
+cmp stdout r15.want
+
+# replace handling prepended priority on add
+rm todo.txt
+exec gtdo -t add 'new task'
+exec gtdo replace 1 '(B) this also has a priority now'
+cmp stdout r16.want
+
+# replace handling priority and prepended date on add
+rm todo.txt
+exec gtdo -t add 'new task'
+exec gtdo pri 1 A
+cmp stdout r17.want
+
+exec gtdo replace 1 this is just a new one
+cmp stdout r18.want
+
+# replace handling prepended priority and date on add
+rm todo.txt
+exec gtdo -t add 'new task'
+exec gtdo replace 1 '(C) 2010-07-04 this also has a priority and new date'
+cmp stdout r19.want
+
+# replace with prepended date replaces existing date
+cp aprio1.txt todo.txt
+exec gtdo replace 1 2010-07-04 this also has a new date
+cmp stdout r20.want
+
+# replace with prepended priority replaces existing priority
+cp aprio1.txt todo.txt
+exec gtdo replace 1 '(B) this also has a new priority'
+cmp stdout r21.want
+
+# replace with prepended priority and date replaces existing date
+cp dateonly.txt todo.txt
+exec gtdo replace 1 '(B) 2010-07-04 this also has a new date'
+cmp stdout r22.want
+
+# replace with prepended priority and date replaces existing priority and date
+cp aprio1.txt todo.txt
+exec gtdo replace 1 '(B) 2010-07-04 this also has a new prio+date'
+cmp stdout r23.want
+
+-- usage.want --
+usage: gtdo replace NR "UPDATED ITEM"
+-- notask.want --
+TODO: No task 10.
+-- daisies.txt --
+notice the daisies
+-- four.txt --
+smell the cows
+grow some corn
+thrash some hay
+chase the chickens
+-- aprio.txt --
+(A) collect the eggs
+-- aprio1.txt --
+(A) 2009-02-13 this is just a new one
+-- hay.txt --
+jump on hay
+-- dateonly.txt --
+2009-02-13 this is just a new one
+-- r1.want --
+1 notice the daisies
+TODO: Replaced task with:
+1 smell the cows
+-- r2.want --
+1 smell the cows
+TODO: Replaced task with:
+1 smell the roses
+-- r3.want --
+1 smell the cows
+TODO: Replaced task with:
+1 smell the cheese
+-- r4.want --
+3 thrash some hay
+TODO: Replaced task with:
+3 jump on hay
+-- r5.want --
+4 chase the chickens
+TODO: Replaced task with:
+4 collect the eggs
+-- r6.want --
+1 (A) collect the eggs
+TODO: Replaced task with:
+1 (A) collect the bread
+-- r7.want --
+1 (A) collect the bread
+TODO: Replaced task with:
+1 (A) collect the eggs
+-- r8.want --
+1 jump on hay
+TODO: Replaced task with:
+1 thrash the hay & thrash the wheat
+-- r9.want --
+1 jump on hay
+TODO: Replaced task with:
+1 notice the   three   spaces
+-- r10.want --
+1 smell the cows
+TODO: Replaced task with:
+1 ~@#$%^&*()-_=+[{]}|;:',<.>/?
+-- r11.want --
+2 grow some corn
+TODO: Replaced task with:
+2 `!\\"
+-- r12.want --
+~@#$%^&*()-_=+[{]}|;:',<.>/?
+`!\\"
+thrash some hay
+chase the chickens
+-- r13.want --
+1 2009-02-13 new task
+TODO: 1 added.
+-- r14.want --
+1 2009-02-13 new task
+TODO: Replaced task with:
+1 2009-02-13 this is just a new one
+-- r15.want --
+1 2009-02-13 this is just a new one
+TODO: Replaced task with:
+1 2010-07-04 this also has a new date
+-- r16.want --
+1 2009-02-13 new task
+TODO: Replaced task with:
+1 (B) 2009-02-13 this also has a priority now
+-- r17.want --
+1 (A) 2009-02-13 new task
+TODO: 1 prioritized (A).
+-- r18.want --
+1 (A) 2009-02-13 new task
+TODO: Replaced task with:
+1 (A) 2009-02-13 this is just a new one
+-- r19.want --
+1 2009-02-13 new task
+TODO: Replaced task with:
+1 (C) 2010-07-04 this also has a priority and new date
+-- r20.want --
+1 (A) 2009-02-13 this is just a new one
+TODO: Replaced task with:
+1 (A) 2010-07-04 this also has a new date
+-- r21.want --
+1 (A) 2009-02-13 this is just a new one
+TODO: Replaced task with:
+1 (B) 2009-02-13 this also has a new priority
+-- r22.want --
+1 2009-02-13 this is just a new one
+TODO: Replaced task with:
+1 (B) 2010-07-04 this also has a new date
+-- r23.want --
+1 (A) 2009-02-13 this is just a new one
+TODO: Replaced task with:
+1 (B) 2010-07-04 this also has a new prio+date

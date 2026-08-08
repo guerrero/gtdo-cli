@@ -1,0 +1,151 @@
+# Port of t1800-del.sh: del functionality, including the confirmation
+# prompt (one character from stdin; the prompt text itself is suppressed
+# because the harness stdin is not a terminal, like bash read -p with a
+# piped stdin). List parts belong to Task 8.
+
+! exec gtdo del B
+cmp stderr usage.want
+
+! exec gtdo -f del 42
+cmp stderr notask.want
+
+! exec gtdo -f del 42 Roses
+cmp stderr notask.want
+
+cp pre3.txt todo.txt
+exec gtdo -f del 1
+cmp stdout d1.want
+
+# del with confirmation: n, x and an empty line all answer no
+cp pre3.txt todo.txt
+stdin n.txt
+! exec gtdo del 1
+cmp stdout d2.want
+cmp stderr d2err.want
+
+stdin x.txt
+! exec gtdo del 1
+cmp stdout d2.want
+cmp stderr d2err.want
+
+stdin empty.txt
+! exec gtdo del 1
+cmp stdout d2.want
+cmp stderr d2err.want
+
+stdin y.txt
+exec gtdo del 1
+cmp stdout d3.want
+
+# del preserving line numbers
+cp pre3.txt todo.txt
+exec gtdo -f del 1
+cmp stdout d1.want
+
+! exec gtdo -f del 1
+cmp stderr notask1.want
+
+exec gtdo add A new task
+cmp stdout d4.want
+
+exec gtdo -f -n del 2
+cmp stdout d5.want
+
+exec gtdo add Another new task
+cmp stdout d6.want
+
+exec cat todo.txt
+cmp stdout d7.want
+
+# basic del TERM: the five sed rules, one task at a time
+cp preabc.txt todo.txt
+exec gtdo del 1 uppercase
+cmp stdout t1.want
+
+exec gtdo del 1 'the Roses'
+cmp stdout t2.want
+
+exec gtdo del 1 m
+cmp stdout t3.want
+
+exec gtdo del 1 @outside
+cmp stdout t4.want
+
+exec gtdo del 1 sell
+cmp stdout t5.want
+
+# del nonexistant TERM: unchanged task printed, then die
+cp preabc.txt todo.txt
+! exec gtdo del 1 dung
+cmp stdout t6.want
+cmp stderr t6err.want
+
+-- usage.want --
+usage: gtdo del NR [TERM]
+-- notask.want --
+TODO: No task 42.
+-- notask1.want --
+TODO: No task 1.
+-- pre3.txt --
+(B) smell the uppercase Roses +flowers @outside
+(A) notice the sunflowers
+stop
+-- preabc.txt --
+(B) smell the uppercase Roses +flowers @outside
+(A) notice the sunflowers
+(C) stop
+-- n.txt --
+n
+-- x.txt --
+x
+-- empty.txt --
+-- y.txt --
+y
+-- d1.want --
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: 1 deleted.
+-- d2.want --
+
+-- d2err.want --
+TODO: No tasks were deleted.
+-- d3.want --
+
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: 1 deleted.
+-- d4.want --
+4 A new task
+TODO: 4 added.
+-- d5.want --
+2 (A) notice the sunflowers
+TODO: 2 deleted.
+-- d6.want --
+3 Another new task
+TODO: 3 added.
+-- d7.want --
+stop
+A new task
+Another new task
+-- t1.want --
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: Removed 'uppercase' from task.
+1 (B) smell the Roses +flowers @outside
+-- t2.want --
+1 (B) smell the Roses +flowers @outside
+TODO: Removed 'the Roses' from task.
+1 (B) smell +flowers @outside
+-- t3.want --
+1 (B) smell +flowers @outside
+TODO: Removed 'm' from task.
+1 (B) sell +flowers @outside
+-- t4.want --
+1 (B) sell +flowers @outside
+TODO: Removed '@outside' from task.
+1 (B) sell +flowers
+-- t5.want --
+1 (B) sell +flowers
+TODO: Removed 'sell' from task.
+1 (B) +flowers
+-- t6.want --
+1 (B) smell the uppercase Roses +flowers @outside
+-- t6err.want --
+TODO: 'dung' not found; no removal done.

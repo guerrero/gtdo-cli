@@ -1,0 +1,78 @@
+# Port of t1000-addlist.sh: basic add functionality. The list parts of the
+# original test belong to Task 8 (t1300); file states are checked with
+# cat in their place.
+
+# basic add
+exec gtdo add notice the daisies
+cmp stdout basic1.want
+
+exec gtdo add smell the roses
+cmp stdout basic2.want
+
+exec gtdo add 'smell the uppercase Roses'
+cmp stdout basic3.want
+
+# add with symbols
+exec gtdo add '~@#$%^&*()-_=+[{]}|;:''',<.>/?
+
+cmp stdout sym1.want
+
+exec gtdo add '`!\\"'
+cmp stdout sym2.want
+
+exec cat todo.txt
+cmp stdout symfile.want
+
+# advanced add: fresh file
+rm todo.txt
+exec gtdo add 'notice the   three   spaces'
+cmp stdout adv1.want
+
+exec gtdo add notice how the   spaces    get lost
+cmp stdout adv2.want
+
+exec cat todo.txt
+cmp stdout advfile.want
+
+# add with CR: the CR byte is squashed to a space (cleaninput); fed via
+# stdin because a txtar command line cannot carry the byte.
+rm todo.txt
+stdin cr.txt
+exec gtdo add
+cmp stdout cr.want
+
+-- basic1.want --
+1 notice the daisies
+TODO: 1 added.
+-- basic2.want --
+2 smell the roses
+TODO: 2 added.
+-- basic3.want --
+3 smell the uppercase Roses
+TODO: 3 added.
+-- sym1.want --
+4 ~@#$%^&*()-_=+[{]}|;:',<.>/?
+TODO: 4 added.
+-- sym2.want --
+5 `!\\"
+TODO: 5 added.
+-- symfile.want --
+notice the daisies
+smell the roses
+smell the uppercase Roses
+~@#$%^&*()-_=+[{]}|;:',<.>/?
+`!\\"
+-- adv1.want --
+1 notice the   three   spaces
+TODO: 1 added.
+-- adv2.want --
+2 notice how the spaces get lost
+TODO: 2 added.
+-- advfile.want --
+notice the   three   spaces
+notice how the spaces get lost
+-- cr.txt --
+smell theCarriage Return
+-- cr.want --
+1 smell the Carriage Return
+TODO: 1 added.

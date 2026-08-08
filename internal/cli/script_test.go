@@ -31,6 +31,11 @@ func TestScript(t *testing.T) {
 			// $ESC expands to a real ESC byte in cmpenv'd want files, so color
 			// tests can be written readably.
 			e.Setenv("ESC", "\x1b")
+			// GTDO_TEST_NOW pins gtdo's clock to the fake epoch of the shell
+			// suite (TODO_TEST_TIME=1234500000 = 2009-02-13T04:40:00Z), so the
+			// date-stamping actions (add -t, do, report) produce the exact
+			// transcripts of t1010/t1500/t1950. Scripts override it to advance.
+			e.Setenv("GTDO_TEST_NOW", "2009-02-13T04:40:00Z")
 			return nil
 		},
 		RequireExplicitExec: true,

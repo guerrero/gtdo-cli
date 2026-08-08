@@ -1,0 +1,40 @@
+# Interactive input paths not exercised by the shell suite: the Add: and
+# Append: prompts read a line of stdin (todo.sh's `read -p ... -e -r`).
+# The prompt text itself only appears on a terminal, so the harness sees
+# none of it; -f skips the prompt and dies on a missing argument.
+
+stdin addtext.txt
+exec gtdo add
+cmp stdout add.want
+
+stdin appendtext.txt
+exec gtdo append 1
+cmp stdout append.want
+
+# -f with nothing to add dies with the usage message
+! exec gtdo -f add
+cmp stderr addusage.want
+
+! exec gtdo -f addm
+cmp stderr addmusage.want
+
+# -f append with no text appends just the sentence space, like todo.sh
+# (input=$* expands to the empty string, appendspace=" " still applies)
+exec gtdo -f append 1
+cmp stdout appendforce.want
+
+-- addtext.txt --
+notice the daisies
+-- appendtext.txt --
+smell the roses
+-- add.want --
+1 notice the daisies
+TODO: 1 added.
+-- append.want --
+1 notice the daisies smell the roses
+-- addusage.want --
+usage: gtdo add "TODO ITEM"
+-- addmusage.want --
+usage: gtdo addm "TODO ITEM"
+-- appendforce.want --
+1 notice the daisies smell the roses 

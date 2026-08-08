@@ -1,0 +1,31 @@
+# Port of t1900-archive.sh: archive functionality (list parts belong to
+# Task 8; the archived file state is checked with cat).
+
+cp arch6.txt todo.txt
+exec gtdo archive
+cmpenv stdout a1.want
+
+exec cat todo.txt
+cmp stdout a2.want
+
+exec gtdo archive
+cmpenv stdout a3.want
+
+-- arch6.txt --
+one
+two
+three
+one
+x done
+four
+-- a1.want --
+x done
+TODO: $HOME/todo.txt archived.
+-- a2.want --
+one
+two
+three
+one
+four
+-- a3.want --
+TODO: $HOME/todo.txt does not contain any done tasks.

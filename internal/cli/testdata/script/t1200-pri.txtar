@@ -1,0 +1,102 @@
+# Port of t1200-pri.sh: priority functionality (list parts belong to
+# Task 8).
+
+! exec gtdo pri B B
+cmp stderr usage.want
+
+cp pri3.txt todo.txt
+exec gtdo pri 1 B
+cmp stdout p1.want
+
+exec gtdo pri 2 C
+cmp stdout p2.want
+
+exec gtdo add 'smell the coffee +wakeup'
+cmp stdout p3.want
+
+# an odd trailing argument dies with usage after the earlier pairs ran
+cp pri3.txt todo.txt
+! exec gtdo pri 1 A 2
+cmp stdout odd.want
+cmp stderr usage.want
+
+# priority error
+! exec gtdo pri 10 B
+cmp stderr notask.want
+
+# reprioritize
+cp priabc.txt todo.txt
+exec gtdo pri 2 A
+cmp stdout p4.want
+
+! exec gtdo pri 2 a
+cmp stdout p5.want
+cmp stderr p5err.want
+
+# multiple priority
+cp pri3.txt todo.txt
+exec gtdo pri 1 A 2 B
+cmp stdout p6.want
+
+exec gtdo pri 1 Z 2 X
+cmp stdout p7.want
+
+# multiple prioritize error: the first pair is processed, then the die
+! exec gtdo pri 1 B 4 B
+cmp stdout p8.want
+cmp stderr notask4.want
+
+! exec gtdo pri 1 C 4 B 3 A
+cmp stdout p9.want
+cmp stderr notask4.want
+
+-- usage.want --
+usage: gtdo pri NR PRIORITY [NR PRIORITY ...]
+note: PRIORITY must be anywhere from A to Z.
+-- notask.want --
+TODO: No task 10.
+-- notask4.want --
+TODO: No task 4.
+-- pri3.txt --
+smell the uppercase Roses +flowers @outside
+notice the sunflowers
+stop
+-- priabc.txt --
+(B) smell the uppercase Roses +flowers @outside
+(C) notice the sunflowers
+stop
+-- p1.want --
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: 1 prioritized (B).
+-- p2.want --
+2 (C) notice the sunflowers
+TODO: 2 prioritized (C).
+-- p3.want --
+4 smell the coffee +wakeup
+TODO: 4 added.
+-- odd.want --
+1 (A) smell the uppercase Roses +flowers @outside
+TODO: 1 prioritized (A).
+-- p4.want --
+2 (A) notice the sunflowers
+TODO: 2 re-prioritized from (C) to (A).
+-- p5.want --
+2 (A) notice the sunflowers
+-- p5err.want --
+TODO: 2 already prioritized (A).
+-- p6.want --
+1 (A) smell the uppercase Roses +flowers @outside
+TODO: 1 prioritized (A).
+2 (B) notice the sunflowers
+TODO: 2 prioritized (B).
+-- p7.want --
+1 (Z) smell the uppercase Roses +flowers @outside
+TODO: 1 re-prioritized from (A) to (Z).
+2 (X) notice the sunflowers
+TODO: 2 re-prioritized from (B) to (X).
+-- p8.want --
+1 (B) smell the uppercase Roses +flowers @outside
+TODO: 1 re-prioritized from (Z) to (B).
+-- p9.want --
+1 (C) smell the uppercase Roses +flowers @outside
+TODO: 1 re-prioritized from (B) to (C).

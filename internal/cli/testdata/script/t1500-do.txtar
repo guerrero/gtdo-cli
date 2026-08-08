@@ -1,0 +1,69 @@
+# Port of t1500-do.sh: do functionality with auto-archive (list parts
+# belong to Task 8; file states are checked with cat).
+
+! exec gtdo do B B
+cmp stderr usage.want
+
+! exec gtdo do
+cmp stderr usage.want
+
+cp do7.txt todo.txt
+exec gtdo do 7,6
+cmpenv stdout d1.want
+
+exec gtdo do 5 4
+cmpenv stdout d2.want
+
+exec cat todo.txt
+cmp stdout d3.want
+
+exec cat done.txt
+cmp stdout d4.want
+
+# fail multiple do attempts (-a disables auto-archive)
+exec gtdo -a do 3
+cmp stdout d5.want
+
+! exec gtdo -a do 3
+cmp stderr d6.want
+
+-- usage.want --
+usage: gtdo do NR [NR ...]
+-- do7.txt --
+smell the uppercase Roses +flowers @outside
+notice the sunflowers
+stop
+remove1
+remove2
+remove3
+remove4
+-- d1.want --
+7 x 2009-02-13 remove4
+TODO: 7 marked as done.
+6 x 2009-02-13 remove3
+TODO: 6 marked as done.
+x 2009-02-13 remove3
+x 2009-02-13 remove4
+TODO: $HOME/todo.txt archived.
+-- d2.want --
+5 x 2009-02-13 remove2
+TODO: 5 marked as done.
+4 x 2009-02-13 remove1
+TODO: 4 marked as done.
+x 2009-02-13 remove1
+x 2009-02-13 remove2
+TODO: $HOME/todo.txt archived.
+-- d3.want --
+smell the uppercase Roses +flowers @outside
+notice the sunflowers
+stop
+-- d4.want --
+x 2009-02-13 remove3
+x 2009-02-13 remove4
+x 2009-02-13 remove1
+x 2009-02-13 remove2
+-- d5.want --
+3 x 2009-02-13 stop
+TODO: 3 marked as done.
+-- d6.want --
+TODO: 3 is already marked done.

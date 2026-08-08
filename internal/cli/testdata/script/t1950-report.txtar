@@ -1,0 +1,83 @@
+# Port of t1950-report.sh: report functionality (list/listfile parts
+# belong to Task 8; the report and done file states are checked with cat).
+
+cp rep5.txt todo.txt
+
+# create new report: archive runs first and finds nothing done
+exec gtdo report
+cmpenv stdout r1.want
+
+# report of done tasks
+exec gtdo -A do 3
+cmpenv stdout r2.want
+
+exec gtdo report
+cmpenv stdout r3.want
+
+# report performs archiving (-a leaves the task unarchived)
+exec gtdo -a do 3
+cmpenv stdout r4.want
+
+exec gtdo report
+cmpenv stdout r5.want
+
+exec cat done.txt
+cmp stdout r6.want
+
+# report is unchanged when no changes
+exec cat report.txt
+cmp stdout r7.want
+
+exec gtdo report
+cmpenv stdout r8.want
+
+exec cat report.txt
+cmp stdout r7.want
+
+# report with override
+env REPORT_FILE=$HOME/specialreport.txt
+exec gtdo report
+cmpenv stdout r9.want
+
+-- rep5.txt --
+(B) smell the uppercase Roses +flowers @outside
+stop and think
+smell the coffee +wakeup
+make the coffee +wakeup
+visit http://example.com
+-- r1.want --
+TODO: $HOME/todo.txt does not contain any done tasks.
+2009-02-13T04:40:00 5 0
+TODO: Report file updated.
+-- r2.want --
+3 x 2009-02-13 smell the coffee +wakeup
+TODO: 3 marked as done.
+x 2009-02-13 smell the coffee +wakeup
+TODO: $HOME/todo.txt archived.
+-- r3.want --
+TODO: $HOME/todo.txt does not contain any done tasks.
+2009-02-13T04:40:00 4 1
+TODO: Report file updated.
+-- r4.want --
+3 x 2009-02-13 make the coffee +wakeup
+TODO: 3 marked as done.
+-- r5.want --
+x 2009-02-13 make the coffee +wakeup
+TODO: $HOME/todo.txt archived.
+2009-02-13T04:40:00 3 2
+TODO: Report file updated.
+-- r6.want --
+x 2009-02-13 smell the coffee +wakeup
+x 2009-02-13 make the coffee +wakeup
+-- r7.want --
+2009-02-13T04:40:00 5 0
+2009-02-13T04:40:00 4 1
+2009-02-13T04:40:00 3 2
+-- r8.want --
+TODO: $HOME/todo.txt does not contain any done tasks.
+2009-02-13T04:40:00 3 2
+TODO: Report file is up-to-date.
+-- r9.want --
+TODO: $HOME/todo.txt does not contain any done tasks.
+2009-02-13T04:40:00 3 2
+TODO: Report file updated.

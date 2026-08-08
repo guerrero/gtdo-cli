@@ -1,0 +1,71 @@
+# Port of t1010-add-date.sh: the date-on-add feature via -t and via the
+# config file. The clock is pinned by GTDO_TEST_NOW (see script_test.go)
+# and advanced with env, mirroring the shell suite's test_tick. The list
+# parts belong to Task 8.
+
+# cmd line first day
+exec gtdo -t add notice the daisies
+cmp stdout day1.want
+
+exec gtdo -pt add '(A) notice the daisies'
+cmp stdout day1pri.want
+
+exec gtdo -npf del 2
+cmp stdout day1del.want
+
+exec gtdo -pt add '(b) notice the daisies'
+cmp stdout day1lower.want
+
+exec gtdo -npf del 2
+cmp stdout day1lowerdel.want
+
+# cmd line second day
+env GTDO_TEST_NOW=2009-02-14T04:40:00Z
+exec gtdo -t add smell the roses
+cmp stdout day2.want
+
+# cmd line third day
+env GTDO_TEST_NOW=2009-02-15T04:40:00Z
+exec gtdo -t add mow the lawn
+cmp stdout day3.want
+
+# config file third day (the shell suite bumps the clock 3600s too)
+env GTDO_TEST_NOW=2009-02-15T05:40:00Z
+exec gtdo -d dateonadd.toml add take out the trash
+cmp stdout day3cfg.want
+
+exec cat todo.txt
+cmp stdout file.want
+
+-- dateonadd.toml --
+[behavior]
+date_on_add = true
+-- day1.want --
+1 2009-02-13 notice the daisies
+TODO: 1 added.
+-- day1pri.want --
+2 (A) 2009-02-13 notice the daisies
+TODO: 2 added.
+-- day1del.want --
+2 (A) 2009-02-13 notice the daisies
+TODO: 2 deleted.
+-- day1lower.want --
+2 (B) 2009-02-13 notice the daisies
+TODO: 2 added.
+-- day1lowerdel.want --
+2 (B) 2009-02-13 notice the daisies
+TODO: 2 deleted.
+-- day2.want --
+2 2009-02-14 smell the roses
+TODO: 2 added.
+-- day3.want --
+3 2009-02-15 mow the lawn
+TODO: 3 added.
+-- day3cfg.want --
+4 2009-02-15 take out the trash
+TODO: 4 added.
+-- file.want --
+2009-02-13 notice the daisies
+2009-02-14 smell the roses
+2009-02-15 mow the lawn
+2009-02-15 take out the trash

@@ -1,0 +1,25 @@
+# Port of t1040-add-priority.sh: the priority-on-add feature. The shell
+# test appends to its config; gtdo uses two config files instead.
+
+# normal use case
+exec gtdo -d priority-a.toml add take out the trash
+cmp stdout ok.want
+
+# wrong value in config var: startup die for any action
+! exec gtdo -d priority-1.toml add fail to take out the trash
+cmp stderr wrong.want
+
+! exec gtdo -d priority-1.toml list
+cmp stderr wrong.want
+
+-- priority-a.toml --
+[behavior]
+priority_on_add = "A"
+-- priority-1.toml --
+[behavior]
+priority_on_add = "1"
+-- ok.want --
+1 (A) take out the trash
+TODO: 1 added.
+-- wrong.want --
+TODOTXT_PRIORITY_ON_ADD should be a capital letter from A to Z (it is now "1").

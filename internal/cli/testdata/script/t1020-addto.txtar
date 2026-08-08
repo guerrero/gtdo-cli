@@ -1,0 +1,45 @@
+# Port of t1020-addtolistfile.sh: the addto functionality (listfile parts
+# belong to Task 8).
+
+# nonexistant file: die with the full destination path, exit 1
+! exec gtdo addto garden.txt notice the daisies
+cmpenv stderr missing.want
+! stdout .
+
+cp empty.txt garden.txt
+
+exec gtdo addto garden.txt notice the daisies
+cmp stdout g1.want
+
+exec gtdo addto garden.txt smell the roses
+cmp stdout g2.want
+
+exec gtdo addto garden.txt smell the uppercase Roses
+cmp stdout g3.want
+
+exec gtdo addto garden.txt 'dig the garden & water the flowers'
+cmp stdout g4.want
+
+exec cat garden.txt
+cmp stdout gfile.want
+
+-- missing.want --
+TODO: Destination file $HOME/garden.txt does not exist.
+-- g1.want --
+1 notice the daisies
+GARDEN: 1 added.
+-- g2.want --
+2 smell the roses
+GARDEN: 2 added.
+-- g3.want --
+3 smell the uppercase Roses
+GARDEN: 3 added.
+-- g4.want --
+4 dig the garden & water the flowers
+GARDEN: 4 added.
+-- gfile.want --
+notice the daisies
+smell the roses
+smell the uppercase Roses
+dig the garden & water the flowers
+-- empty.txt --

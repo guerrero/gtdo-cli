@@ -17,7 +17,9 @@ import (
 // registered through newAction, the same constructor help and shorthelp use.
 // No-action and unknown-action invocations never reach cobra: Execute checks
 // the action against the tree first and prints the usage text itself.
-func NewRootCmd() *cobra.Command {
+// cfg is the resolved configuration every action reads; Run builds it before
+// the tree so that the actions never re-resolve it.
+func NewRootCmd(cfg *config.Config) *cobra.Command {
 	root := &cobra.Command{
 		Use: "gtdo",
 		// The pre-parser owns all flag parsing (§6.1): flags are accepted
@@ -38,11 +40,11 @@ func NewRootCmd() *cobra.Command {
 		use:   "shorthelp",
 		short: shorthelpText,
 		long:  shorthelpText,
-		run: func(cmd *cobra.Command, _ []string) error {
+		run: func(cmd *cobra.Command, _ []string, _ *config.Config) error {
 			fmt.Fprint(cmd.OutOrStdout(), ShorthelpString(root))
 			return nil
 		},
-	})
+	}, cfg)
 	root.AddCommand(shorthelp)
 
 	// help is registered as the help command itself: cobra's InitDefaultHelpCmd
@@ -53,7 +55,7 @@ func NewRootCmd() *cobra.Command {
 		use:   "help [ACTION...]",
 		short: helpText,
 		long:  helpText,
-		run: func(cmd *cobra.Command, args []string) error {
+		run: func(cmd *cobra.Command, args []string, _ *config.Config) error {
 			if len(args) == 0 {
 				fmt.Fprint(cmd.OutOrStdout(), HelpString(root))
 				return nil
@@ -70,9 +72,11 @@ func NewRootCmd() *cobra.Command {
 			}
 			return nil
 		},
-	})
+	}, cfg)
 	root.SetHelpCommand(help)
 	root.AddCommand(help)
+
+	registerActions(root, cfg)
 
 	return root
 }
@@ -85,13 +89,16 @@ type actionSpec struct {
 	aliases []string // todo.sh aliases, e.g. ["a"]; extra usage lines in help blocks
 	short   string   // one-line description for shorthelp's action list
 	long    string   // block description for help [ACTION]
-	run     func(cmd *cobra.Command, args []string) error
+	run     func(cmd *cobra.Command, args []string, cfg *config.Config) error
 }
 
 // newAction turns an actionSpec into a cobra command with gtdo's shared
 // settings: the pre-parser owns flags, and cobra never prints its own usage
 // or error text — gtdo's messages and exit codes are the parity contract.
-func newAction(spec actionSpec) *cobra.Command {
+// Every action receives the resolved configuration; help and shorthelp
+// ignore it.
+func newAction(spec actionSpec, cfg *config.Config) *cobra.Command {
+	run := spec.run
 	return &cobra.Command{
 		Use:                spec.use,
 		Aliases:            spec.aliases,
@@ -100,7 +107,9 @@ func newAction(spec actionSpec) *cobra.Command {
 		DisableFlagParsing: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
-		RunE:               spec.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return run(cmd, args, cfg)
+		},
 	}
 }
 
@@ -147,9 +156,21 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		fmt.Fprint(stdout, UsageString())
 		return exitcode.Generic
 	}
-	root := NewRootCmd()
+	// todo.sh validates TODOTXT_PRIORITY_ON_ADD at startup, before any
+	// action runs; the message is part of the parity contract (§6.3 add).
+	if !validPriorityOnAdd(cfg.PriorityOnAdd) {
+		fmt.Fprintf(stderr, "TODOTXT_PRIORITY_ON_ADD should be a capital letter from A to Z (it is now %q).\n", cfg.PriorityOnAdd)
+		return exitcode.Generic
+	}
+
+	root := NewRootCmd(&cfg)
 	if err := Execute(root, action, rest, stdin, stdout, stderr); err != nil {
 		return exitcode.Of(err)
 	}
 	return exitcode.OK
+}
+
+// validPriorityOnAdd mirrors todo.sh's startup grep '^[A-Z]$' check.
+func validPriorityOnAdd(pri string) bool {
+	return pri == "" || (len(pri) == 1 && pri[0] >= 'A' && pri[0] <= 'Z')
 }

@@ -1,0 +1,77 @@
+# Port of t1400-prepend.sh: prepend functionality (list parts belong to
+# Task 8).
+
+! exec gtdo prepend B B
+cmp stderr usage.want
+
+cp pre3.txt todo.txt
+exec gtdo prepend 2 test
+cmp stdout p1.want
+
+exec gtdo prepend 1 test
+cmp stdout p2.want
+
+exec gtdo prepend 3 'no running & jumping now'
+cmp stdout p3.want
+
+cp hay.txt todo.txt
+exec gtdo prepend 1 'notice the   three   spaces and'
+cmp stdout p4.want
+
+cp pre4.txt todo.txt
+exec gtdo prepend 1 '~@#$%^&*()-_=+[{]}|;:''',<.>/?
+cmp stdout p5.want
+
+exec gtdo prepend 2 '`!\\"'
+cmp stdout p6.want
+
+# prepend handling prepended date on add
+rm todo.txt
+exec gtdo -t add 'new task'
+exec gtdo prepend 1 'this is just a'
+cmp stdout p7.want
+
+# prepend handling priority and prepended date on add
+rm todo.txt
+exec gtdo -t add 'new task'
+exec gtdo pri 1 A
+exec gtdo prepend 1 'this is just a'
+cmp stdout p8.want
+
+# prepend with prepended date keeps both
+rm todo.txt
+exec gtdo -t add 'new task'
+exec gtdo prepend 1 '2010-07-04 this is just a'
+cmp stdout p9.want
+
+-- usage.want --
+usage: gtdo prepend NR "TEXT TO PREPEND"
+-- pre3.txt --
+(B) smell the uppercase Roses +flowers @outside
+notice the sunflowers
+stop
+-- pre4.txt --
+smell the cows
+grow some corn
+thrash some hay
+chase the chickens
+-- hay.txt --
+jump on hay
+-- p1.want --
+2 test notice the sunflowers
+-- p2.want --
+1 (B) test smell the uppercase Roses +flowers @outside
+-- p3.want --
+3 no running & jumping now stop
+-- p4.want --
+1 notice the   three   spaces and jump on hay
+-- p5.want --
+1 ~@#$%^&*()-_=+[{]}|;:',<.>/? smell the cows
+-- p6.want --
+2 `!\\" grow some corn
+-- p7.want --
+1 2009-02-13 this is just a new task
+-- p8.want --
+1 (A) 2009-02-13 this is just a new task
+-- p9.want --
+1 2009-02-13 2010-07-04 this is just a new task

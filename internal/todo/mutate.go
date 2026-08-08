@@ -482,6 +482,13 @@ func (s *Store) Report(now time.Time) (line string, updated bool, err error) {
 	return line, true, nil
 }
 
+// TaskAt is taskAt exported for the CLI layer: del and move need the task
+// text for their confirmation prompts, and getTodo's die text is the
+// parity contract for out-of-range items.
+func (s *Store) TaskAt(path string, item int) (Task, error) {
+	return s.taskAt(path, item)
+}
+
 // taskAt returns the item-th line of path, todo.sh's getTodo: an
 // out-of-range or blank line is an error carrying the file's prefix
 // (TODO/DONE), the exact text the CLI prints.

@@ -1,0 +1,53 @@
+# Port of t1700-depri.sh: depriority functionality (list parts belong to
+# Task 8).
+
+! exec gtdo depri B B
+cmp stderr usage.want
+
+! exec gtdo depri 42
+cmp stderr notask.want
+
+cp pre3.txt todo.txt
+exec gtdo depri 1
+cmp stdout d1.want
+
+cp preabc.txt todo.txt
+exec gtdo depri 3 2
+cmp stdout d2.want
+
+# depriority of unprioritized task: stderr complaint, exit 1, but the
+# later items are still processed
+cp prea3.txt todo.txt
+! exec gtdo depri 3 2
+cmp stdout d3.want
+cmp stderr d3err.want
+
+-- usage.want --
+usage: gtdo depri NR [NR ...]
+-- notask.want --
+TODO: No task 42.
+-- prea3.txt --
+(B) smell the uppercase Roses +flowers @outside
+(A) notice the sunflowers
+stop
+-- pre3.txt --
+(B) smell the uppercase Roses +flowers @outside
+notice the sunflowers
+stop
+-- preabc.txt --
+(B) smell the uppercase Roses +flowers @outside
+(A) notice the sunflowers
+(C) stop
+-- d1.want --
+1 smell the uppercase Roses +flowers @outside
+TODO: 1 deprioritized.
+-- d2.want --
+3 stop
+TODO: 3 deprioritized.
+2 notice the sunflowers
+TODO: 2 deprioritized.
+-- d3.want --
+2 notice the sunflowers
+TODO: 2 deprioritized.
+-- d3err.want --
+TODO: 3 is not prioritized.
