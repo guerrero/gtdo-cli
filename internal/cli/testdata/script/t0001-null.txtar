@@ -1,0 +1,55 @@
+# Port of t0001-null.sh: basic commands with no todos.
+# The listfile/lf sessions are out of scope: listfile is not a gtdo
+# action (plan §2).
+
+# ls|list: empty todo.txt, nothing to show.
+exec gtdo ls
+cmp stdout ls.want
+
+exec gtdo list
+cmp stdout ls.want
+
+exec gtdo list filter
+cmp stdout ls.want
+
+# lsp|listpri: same output as ls.
+exec gtdo lsp
+cmp stdout ls.want
+
+exec gtdo listpri
+cmp stdout ls.want
+
+exec gtdo listpri a
+cmp stdout ls.want
+
+# lsa|listall: todo and done summaries.
+exec gtdo lsa
+cmp stdout lsa.want
+
+exec gtdo listall
+cmp stdout lsa.want
+
+exec gtdo listall filter
+cmp stdout lsa.want
+
+# lsc|listcon and lsprj|listproj: nothing to list, no output at all.
+exec gtdo lsc
+stdout '^$'
+
+exec gtdo listcon
+stdout '^$'
+
+exec gtdo lsprj
+stdout '^$'
+
+exec gtdo listproj
+stdout '^$'
+
+-- ls.want --
+--
+TODO: 0 of 0 tasks shown
+-- lsa.want --
+--
+TODO: 0 of 0 tasks shown
+DONE: 0 of 0 tasks shown
+total 0 of 0 tasks shown

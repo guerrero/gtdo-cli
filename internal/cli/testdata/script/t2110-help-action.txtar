@@ -1,0 +1,68 @@
+# Port of t2110-help-action.sh: built-in action help queries.
+#
+# todo.sh's actionUsage greps its actionsHelp text for the block of the
+# requested action; gtdo renders the same blocks from the registered
+# commands (§6.4). The error message and exit code are the parity
+# contract; the block texts are gtdo's own (no add-on references).
+
+# Nonexisting action: error on stderr, exit 1, nothing on stdout.
+! exec gtdo help doesnotexist
+stdout '^$'
+stderr '^TODO: No action "doesnotexist" exists\.$'
+
+# Partial names do not match "help" (todo.sh's sed needs the exact name
+# followed by a space or end of line).
+! exec gtdo help hel
+stdout '^$'
+stderr '^TODO: No action "hel" exists\.$'
+
+! exec gtdo help h
+stdout '^$'
+stderr '^TODO: No action "h" exists\.$'
+
+# Single action help: usage lines and description, blank-line terminated.
+exec gtdo help shorthelp
+cmp stdout sh.want
+
+# Multiple actions: each block in order.
+exec gtdo help shorthelp append
+cmp stdout sh-append.want
+
+# Short and long form: the full block lists the command and its aliases;
+# querying an alias shows only that alias's usage line.
+exec gtdo help append
+cmp stdout append.want
+
+exec gtdo help app
+cmp stdout app.want
+
+# Mixed existing and nonexisting: the found block prints, then the error
+# stops the run (todo.sh's actionUsage dies on the first miss).
+! exec gtdo help shorthelp doesnotexist list
+stdout '^    shorthelp'
+stderr '^TODO: No action "doesnotexist" exists\.$'
+
+-- sh.want --
+    shorthelp
+      List the one-line usage of all built-in actions.
+
+-- sh-append.want --
+    shorthelp
+      List the one-line usage of all built-in actions.
+
+    append NR "TEXT TO APPEND"
+    app NR "TEXT TO APPEND"
+      Adds TEXT TO APPEND to the end of the task on line NR.
+      Quotes optional.
+
+-- append.want --
+    append NR "TEXT TO APPEND"
+    app NR "TEXT TO APPEND"
+      Adds TEXT TO APPEND to the end of the task on line NR.
+      Quotes optional.
+
+-- app.want --
+    app NR "TEXT TO APPEND"
+      Adds TEXT TO APPEND to the end of the task on line NR.
+      Quotes optional.
+

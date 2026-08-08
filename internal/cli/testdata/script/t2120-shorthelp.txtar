@@ -1,0 +1,23 @@
+# Port of t2120-shorthelp.sh: the -h option and the shorthelp action.
+#
+# The shell test filters the output with sed '/^  [A-Z]/!d' to check only
+# the section headers (and sed '/^ \{0,2\}[A-Z]/!d' for the config-error
+# sessions). gtdo's shorthelp is its own text (§6.4): it has no
+# "Actions can be added and overridden using scripts in the actions
+# directory." line — gtdo has no add-ons (§2).
+#
+# Out of scope: the custom-action sessions (make_action foo) and the
+# fatal-error sessions. todo.sh dies when no config file exists, even for
+# -h; gtdo's missing config file is not an error (§5.1), so -h always
+# succeeds. -h discards every remaining argument, like todo.sh's
+# `set -- '-h' 'shorthelp'` (pinned in shorthelp.txtar).
+
+exec gtdo -h
+stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Actions:$'
+stdout '^  See "help" for more details\.$'
+
+exec gtdo shorthelp
+stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Actions:$'
+stdout '^  See "help" for more details\.$'
