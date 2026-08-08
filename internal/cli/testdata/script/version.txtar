@@ -1,0 +1,7 @@
+# -V prints the version block and exits 0, before any config resolution.
+exec gtdo -V
+stdout '^gtdo dev\ncommit:  none\nbuilt:   unknown\n'
+
+# -V short-circuits: trailing arguments are ignored.
+exec gtdo -V list
+stdout '^gtdo dev\n'

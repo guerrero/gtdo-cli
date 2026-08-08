@@ -1,0 +1,21 @@
+# No action prints the usage text to stdout and exits 1.
+! exec gtdo
+stdout 'Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]'
+stdout 'Try ''gtdo -h'' for more information.'
+
+# An unknown action is a usage error too (cobra reports "unknown command").
+! exec gtdo bogus
+stdout 'Usage: gtdo \[-fhpantvV\]'
+
+# An unknown flag is a usage error.
+! exec gtdo -q list
+stdout 'Usage: gtdo \[-fhpantvV\]'
+
+# Flags are accepted only before the action; a trailing -p is a positional arg.
+# list is not wired until Task 6, so this is an unknown-action usage error.
+! exec gtdo -p list -p
+stdout 'Usage: gtdo \[-fhpantvV\]'
+
+# -h forwards to shorthelp (exit 0), even with trailing garbage.
+exec gtdo -h bogus
+stdout '^  Usage: gtdo \[-fhpantvV\]'
