@@ -15,7 +15,7 @@ import (
 
 // actionArchive is the archive action: with verbose on it prints the
 // archived lines and the archived message, or the no-done-tasks warning.
-func actionArchive(cmd *cobra.Command, args []string, cfg *config.Config) error {
+func actionArchive(cmd *cobra.Command, _ []string, cfg *config.Config) error {
 	s, err := newSession(cmd, cfg)
 	if err != nil {
 		return err
@@ -49,7 +49,7 @@ func runArchive(s *session) error {
 
 // actionReport appends "TIMESTAMP OPEN DONE" to report.txt (or reuses the
 // last line when the counts are unchanged), after archiving first.
-func actionReport(cmd *cobra.Command, args []string, cfg *config.Config) error {
+func actionReport(cmd *cobra.Command, _ []string, cfg *config.Config) error {
 	s, err := newSession(cmd, cfg)
 	if err != nil {
 		return err
