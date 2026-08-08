@@ -1,0 +1,46 @@
+version: 2
+
+project_name: gtdo
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: gtdo
+    main: ./cmd/gtdo
+    binary: gtdo
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/guerrero/gtdo/internal/cli.Version={{ .Version }}
+      - -X github.com/guerrero/gtdo/internal/cli.Commit={{ .ShortCommit }}
+      - -X github.com/guerrero/gtdo/internal/cli.Date={{ .Date }}
+
+archives:
+  - id: gtdo
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - completions/*
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
