@@ -63,14 +63,15 @@ func TestTaskNumbers(t *testing.T) {
 // unreadable TODO_FILE yields no completions, and the command is never
 // asked to create anything (completions read the file directly).
 func TestTaskNumbersMissingFile(t *testing.T) {
-	got, directive := runCompletions(everyArgNumbers(todoFileConfig(filepath.Join(t.TempDir(), "absent.txt"))), nil, "")
+	path := filepath.Join(t.TempDir(), "absent.txt")
+	got, directive := runCompletions(everyArgNumbers(todoFileConfig(path)), nil, "")
 	if len(got) != 0 {
 		t.Errorf("completions = %q, want none", got)
 	}
 	if directive != cobra.ShellCompDirectiveNoFileComp {
 		t.Errorf("directive = %v, want ShellCompDirectiveNoFileComp", directive)
 	}
-	if _, err := os.Stat(filepath.Join(t.TempDir(), "absent.txt")); !os.IsNotExist(err) {
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Error("completion created a file")
 	}
 }
