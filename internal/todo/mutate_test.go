@@ -182,6 +182,26 @@ func TestAddmUUIDSequence(t *testing.T) {
 	}
 }
 
+func TestAddmUUIDReservesExplicitID(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	const explicit = "20090213T044000.12Z"
+	res, err := s.Addm(explicit+" imported task\nnew task", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AddResult{
+		{LineNumber: 1, Text: explicit + " imported task"},
+		{LineNumber: 2, Text: "20090213T044000.13Z new task"},
+	}
+	if !reflect.DeepEqual(res, want) {
+		t.Errorf("Addm = %+v, want %+v", res, want)
+	}
+	if got := readFile(t, s.TodoFile); got != explicit+" imported task\n20090213T044000.13Z new task\n" {
+		t.Errorf("todo.txt = %q", got)
+	}
+}
+
 func TestAddmUUIDRollover(t *testing.T) {
 	s := newTestStore(t, "")
 	s.EnableUUID = true
@@ -302,6 +322,25 @@ func TestAddtoUUID(t *testing.T) {
 	}
 	if got := readFile(t, garden); got != "existing garden task\n"+want+"\n" {
 		t.Errorf("garden.txt = %q", got)
+	}
+}
+
+func TestAddtoUUIDUsesDestinationCollisionDomain(t *testing.T) {
+	const existing = "20090213T044000.12Z"
+	s := newTestStore(t, existing+" todo task\n")
+	s.EnableUUID = true
+	garden := filepath.Join(s.Dir, "garden.txt")
+	writeFile(t, garden, "")
+	line, text, err := s.Addto("garden.txt", "garden task", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := existing + " garden task"
+	if line != 1 || text != want {
+		t.Errorf("Addto = (%d, %q), want (1, %q)", line, text, want)
+	}
+	if got := readFile(t, garden); got != want+"\n" {
+		t.Errorf("garden.txt = %q, want %q", got, want+"\n")
 	}
 }
 

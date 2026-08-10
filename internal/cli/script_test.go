@@ -33,7 +33,7 @@ func TestScript(t *testing.T) {
 			e.Setenv("ESC", "\x1b")
 			// GTDO_TEST_NOW pins gtdo's clock to the fake epoch of the shell
 			// suite (TODO_TEST_TIME=1234500000 = 2009-02-13T04:40:00Z), so the
-			// completion/report actions and opt-in UUID sessions produce exact
+			// do/report actions and opt-in UUID sessions produce exact
 			// transcripts. Scripts override it to advance.
 			e.Setenv("GTDO_TEST_NOW", "2009-02-13T04:40:00Z")
 			return nil
