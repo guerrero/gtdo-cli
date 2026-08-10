@@ -6,11 +6,11 @@ gtdo is a Go port of [todo.txt-cli](https://github.com/todotxt/todo.txt-cli)'s
 
 ## Parity
 
-gtdo's goal is parity with todo.sh (todo.txt-cli v2.x): for the twenty
+gtdo's goal is parity with todo.sh (todo.txt-cli v2.x): for the twenty-one
 in-scope actions it produces byte-identical stdout, stderr, exit codes, and
 file states. The in-scope actions are:
 
-`add`, `addm`, `addto`, `append`, `archive`, `del`, `depri`, `do`, `help`,
+`add`, `addm`, `addto`, `append`, `archive`, `del`, `depri`, `do`, `format`, `help`,
 `list`, `listall`, `listcon`, `listpri`, `listproj`, `move`, `prepend`, `pri`,
 `replace`, `report`, `shorthelp`
 
@@ -61,7 +61,13 @@ dir = "~/todo"          # TODO_DIR
 [behavior]
 verbose = 1             # TODOTXT_VERBOSE
 force = false           # TODOTXT_FORCE
+task_format = "[checked][priority][uuid][content][keywords][project][context]"
 ```
+
+`gtdo format` rewrites both configured task files, while `gtdo format FILE`
+rewrites only the selected file. The `task_format` template supports
+`[checked]`, `[priority]`, `[uuid]`, `[content]`, `[keywords]`, `[project]`,
+and `[context]` placeholders.
 
 The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`,
 `DONE_FILE`, `REPORT_FILE`, `TODOTXT_*`) keep working for scripting

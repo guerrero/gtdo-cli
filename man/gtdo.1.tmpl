@@ -35,6 +35,12 @@ and
 tags from the current
 .IR todo.txt
 file.
+.PP
+The
+.B format [FILE]
+action rewrites both configured task files, or the selected file when
+.I FILE
+is specified.
 {{.Commands}}
 .SH OPTIONS
 .TP
@@ -134,6 +140,23 @@ Use another source for listcon, listproj.
 .TP
 .B SENTENCE_DELIMITERS=,.:;
 Suppress the added space in append.
+.SH CONFIGURATION
+.TP
+.B [behavior] task_format
+Controls the field order used by the
+.B format
+action. The default is
+.BR [checked][priority][uuid][content][keywords][project][context] .
+The formatter inserts one space between non-empty fields automatically. The
+available fields are
+.BR checked ,
+.BR priority ,
+.BR uuid ,
+.BR content ,
+.BR keywords ,
+.BR project ,
+and
+.BR context .
 .SH FILES
 .TP
 .I $TODO_DIR/todo.txt
