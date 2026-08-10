@@ -48,7 +48,9 @@ British spelling; `colors` retains its existing American spelling.
     "defaultAction": "",
     "sourceVar": "",
     "sentenceDelimiters": ",.:;",
-    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]"
+    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]",
+    "allowedContexts": ["@work", "@home"],
+    "allowedProjects": ["+gtdo", "+personal"]
   },
   "colors": {
     "priA": "yellow",
@@ -75,7 +77,10 @@ map name, a raw ANSI string, or an empty string to disable the role.
 All properties are optional. Omitted values retain the current defaults.
 When a file path is omitted, it is derived from the fully resolved `dir` as it
 is today. JSON `null` is not a supported substitute for a setting value; each
-present property must have the type shown by the schema.
+present property must have the type shown by the schema. `allowedContexts` and
+`allowedProjects` are exact, case-sensitive arrays of complete sigil tokens;
+omitting either leaves that category unrestricted, while an explicit empty
+array rejects every token in that category.
 
 ## Architecture and data flow
 
@@ -129,7 +134,7 @@ support. No migration command or automatic converter is added.
 Config unit tests use JSON fixtures and cover:
 
 - the full camelCase schema, including the default and JSON-loaded
-  `taskFormat` value;
+  `taskFormat`, `allowedContexts`, and `allowedProjects` values;
 - default, JSON, environment, and CLI precedence;
 - JSON search order and path expansion;
 - legacy `config.toml` default locations being ignored;

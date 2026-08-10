@@ -195,6 +195,22 @@ Listing remains usable for legacy tasks with tags that are not allowed.
 On rejection, the diagnostic includes the file and 1-based line number, for
 example:
 .BR "TODO: Context \"@home\" is not allowed in /path/to/todo.txt at line 3."
+.TP
+.B behaviour.taskFormat
+Controls the field order used by the
+.B format
+action. The default is
+.BR [checked][priority][uuid][content][keywords][project][context] .
+The formatter inserts one space between non-empty fields automatically. The
+available fields are
+.BR checked ,
+.BR priority ,
+.BR uuid ,
+.BR content ,
+.BR keywords ,
+.BR project ,
+and
+.BR context .
 .SH ENVIRONMENT
 .TP
 .B TODO_DIR
@@ -238,23 +254,6 @@ Use another source for listcon, listproj.
 .TP
 .B SENTENCE_DELIMITERS=,.:;
 Suppress the added space in append.
-.SH CONFIGURATION
-.TP
-.B behaviour.taskFormat
-Controls the field order used by the
-.B format
-action. The default is
-.BR [checked][priority][uuid][content][keywords][project][context] .
-The formatter inserts one space between non-empty fields automatically. The
-available fields are
-.BR checked ,
-.BR priority ,
-.BR uuid ,
-.BR content ,
-.BR keywords ,
-.BR project ,
-and
-.BR context .
 .SH FILES
 .TP
 .I $TODO_DIR/todo.txt
