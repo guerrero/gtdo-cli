@@ -54,6 +54,18 @@ When standard input is not a terminal, the modes use a line-oriented protocol
 without prompts or escape sequences.
 {{.Commands}}
 .SH INTERACTIVE ADD
+.PP
+The mode options are
+.B \-i
+or
+.B --interactive
+for one editable task line, and
+.B \-g
+or
+.B --guided
+for phased input. Guided phase selection repeats
+.B --only
+with the phase names metadata, project, and context.
 .TP
 .B gtdo add \-i
 Read one editable task line. On a terminal, @context and +project words offer
