@@ -35,7 +35,57 @@ and
 tags from the current
 .IR todo.txt
 file.
+.PP
+Interactive add modes are available with
+.B gtdo add \-i
+or
+.B gtdo add \-g .
+The guided form runs metadata, project, and context phases; repeatable
+.B --only
+options select one or more phases. Candidate values come only from the
+configured
+.B todo_file
+and
+.B done_file
+paths; the configured
+.B report_file
+is not scanned. Terminal selectors support Up/Down, Space, /, Enter, and Esc.
+When standard input is not a terminal, the modes use a line-oriented protocol
+without prompts or escape sequences.
 {{.Commands}}
+.SH INTERACTIVE ADD
+.TP
+.B gtdo add \-i
+Read one editable task line. On a terminal, @context and +project words offer
+completion from the configured todo and done files. With non-TTY input, read
+one plain task line.
+.TP
+.B gtdo add \-g
+Read a task, then run the metadata, project, and context phases in that order.
+The project and context phases use searchable multi-selectors. Their controls
+are Up/Down to move, Space to toggle, / to filter, Enter to confirm, and Esc
+to clear a filter or exit.
+.TP
+.B gtdo add \-g --only metadata|project|context
+Run only the named guided phase(s). Repeat
+.B --only
+to select more than one phase; it requires guided mode. The task line is
+always read.
+.PP
+Candidates are deduplicated from the configured
+.B todo_file
+and
+.B done_file
+paths only. The configured
+.B report_file
+is never scanned. In the non-TTY protocol, interactive mode consumes one task
+line. Guided mode consumes one task line, then input for each enabled phase in
+order: zero or more metadata
+.B key:value
+lines terminated by an empty line, one space-separated project line, and one
+space-separated context line. Phases omitted with
+.B --only
+consume no line. Empty selection lines are valid.
 .SH OPTIONS
 .TP
 .B \-@

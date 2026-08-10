@@ -78,6 +78,12 @@ func TestManPageHasTheSectionsCobraDoesNotEmit(t *testing.T) {
 			t.Errorf("man/gtdo.1 is missing %s", section)
 		}
 	}
+
+	for _, text := range []string{"\\-i", "\\-g", "--only", "todo_file", "done_file"} {
+		if !strings.Contains(string(data), text) {
+			t.Errorf("man/gtdo.1 is missing %q", text)
+		}
+	}
 }
 
 // TestManPageDocumentsEveryExitCode pins the exit-status contract: gtdo
