@@ -1141,6 +1141,129 @@ func TestReportUpToDate(t *testing.T) {
 	}
 }
 
+func TestUUIDPreservationAcrossMutations(t *testing.T) {
+	const id = "20090213T044000.12Z"
+	s := newTestStore(t, "(A) "+id+" 2026-02-13 buy milk\n")
+
+	got, err := s.Append(1, "today")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "(A) "+id+" 2026-02-13 buy milk today" {
+		t.Errorf("Append = %q", got)
+	}
+
+	got, err = s.Prepend(1, "remember")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "(A) "+id+" 2026-02-13 remember buy milk today" {
+		t.Errorf("Prepend = %q", got)
+	}
+
+	_, got, err = s.Replace(1, "(B) new")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "(B) "+id+" 2026-02-13 new" {
+		t.Errorf("Replace = %q", got)
+	}
+
+	gotPri, err := s.Pri(1, 'C')
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotPri.NewText != "(C) "+id+" 2026-02-13 new" {
+		t.Errorf("Pri = %q", gotPri.NewText)
+	}
+
+	gotDepri, err := s.Depri([]int{1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotDepri[0].NewText != id+" 2026-02-13 new" {
+		t.Errorf("Depri = %q", gotDepri[0].NewText)
+	}
+
+	gotDone, err := s.Do([]int{1}, fixedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantDone := "x " + id + " 2009-02-13 2026-02-13 new"
+	if gotDone[0].NewText != wantDone {
+		t.Errorf("Do = %q, want %q", gotDone[0].NewText, wantDone)
+	}
+
+	_, got, err = s.DelTerm(1, "e")
+	wantPrefix := "x " + id + " 2009-02-13 "
+	if !strings.HasPrefix(got, wantPrefix) {
+		t.Errorf("DelTerm = %q, want prefix %q", got, wantPrefix)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReplaceExistingUUIDWins(t *testing.T) {
+	const id = "20090213T044000.12Z"
+	s := newTestStore(t, "(A) "+id+" old\n")
+	_, got, err := s.Replace(1, "(B) 20990101T010101.00Z replacement")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "(B) " + id + " replacement"
+	if got != want {
+		t.Errorf("Replace = %q, want %q", got, want)
+	}
+}
+
+func TestUUIDPreservationMoveAndArchive(t *testing.T) {
+	const id = "20090213T044000.12Z"
+	s := newTestStore(t, "x "+id+" 2009-02-13 done task\n")
+	writeFile(t, s.DoneFile, "old done\n")
+	old, _, err := s.Move(1, s.DoneFile, s.TodoFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old != "x "+id+" 2009-02-13 done task" {
+		t.Errorf("Move returned %q", old)
+	}
+	if got := readFile(t, s.DoneFile); got != "old done\nx "+id+" 2009-02-13 done task\n" {
+		t.Errorf("done.txt after Move = %q", got)
+	}
+
+	writeFile(t, s.TodoFile, "x "+id+" 2009-02-13 archived task\n")
+	moved, err := s.Archive()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(moved, []string{"x " + id + " 2009-02-13 archived task"}) {
+		t.Errorf("Archive = %v", moved)
+	}
+	if got := readFile(t, s.DoneFile); got != "old done\nx "+id+" 2009-02-13 done task\nx "+id+" 2009-02-13 archived task\n" {
+		t.Errorf("done.txt after Archive = %q", got)
+	}
+}
+
+func TestUUIDMutationsDoNotBackfillLegacyTask(t *testing.T) {
+	s := newTestStore(t, "old task\n")
+	s.EnableUUID = true
+	got, err := s.Append(1, "today")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "old task today" {
+		t.Errorf("Append = %q", got)
+	}
+	_, got, err = s.Replace(1, "new task")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "new task" {
+		t.Errorf("Replace = %q", got)
+	}
+}
+
 func TestReportCountsChanged(t *testing.T) {
 	s := newTestStore(t, "one\n")
 	writeFile(t, s.DoneFile, "")
