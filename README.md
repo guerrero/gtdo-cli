@@ -67,6 +67,25 @@ The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`,
 `DONE_FILE`, `REPORT_FILE`, `TODOTXT_*`) keep working for scripting
 compatibility.
 
+Timestamp IDs are opt in. Add this to the behavior section to assign an ID to
+each newly created task:
+
+```toml
+[behavior]
+enable_uuid = true        # add UTC timestamp IDs to new tasks
+```
+
+`GTDO_ENABLE_UUID` overrides the TOML value. When enabled, gtdo adds a UTC
+timestamp ID in the exact `YYYYMMDDTHHMMSS.nnZ` format (for example,
+`20260808T143045.12Z`). If a candidate collides with an existing ID, or with
+one allocated earlier in the same batch, gtdo advances it by 10 ms and retries.
+IDs are creation-only and preserved through edits and moves; enabling the
+setting later never backfills existing tasks.
+
+The former date-on-add behavior has been retired, so add commands no longer
+insert a creation date automatically. Dates already present in a task remain
+unchanged.
+
 ## Development
 
 ```bash

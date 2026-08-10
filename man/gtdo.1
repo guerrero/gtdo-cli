@@ -1,4 +1,4 @@
-.TH GTDO 1 "2026-08-09" "gtdo dev" "User Commands"
+.TH GTDO 1 "2026-08-10" "gtdo dev" "User Commands"
 .SH NAME
 gtdo \- a Go port of the todo.txt-cli (todo.sh) command line interface
 .SH SYNOPSIS
@@ -97,6 +97,34 @@ Add the number of open and done tasks to report.txt.
 .B shorthelp
 List the one-line usage of all built-in actions.
 
+.SH CONFIGURATION
+.PP
+gtdo reads TOML configuration from
+.IR ~/.config/gtdo/config.toml
+unless another path is selected with
+.B \-d
+or
+.B $GTDO_CONFIG .
+Timestamp IDs are opt in. Enable them with:
+.EX
+[behavior]
+enable_uuid = true        # add UTC timestamp IDs to new tasks
+.EE
+.PP
+.B GTDO_ENABLE_UUID
+overrides the TOML value. When enabled, each newly created task receives a
+UTC timestamp ID in the exact format
+.B YYYYMMDDTHHMMSS.nnZ
+(for example,
+.B 20260808T143045.12Z ) .
+If a candidate collides with an existing ID, or with one allocated earlier in
+the same batch, gtdo advances it by 10 ms and retries. IDs are creation-only
+and are preserved through edits and moves; enabling the setting later never
+backfills existing tasks.
+.PP
+The former date-on-add behavior has been retired, so add commands no longer
+insert a creation date automatically. Dates already present in a task remain
+unchanged.
 .SH OPTIONS
 .TP
 .B \-@
@@ -135,12 +163,6 @@ Don't preserve line numbers; automatically remove blank lines on task deletion
 .B \-N
 Preserve line numbers
 .TP
-.B \-t
-Prepend the current date to a task automatically when it's added.
-.TP
-.B \-T
-Do not prepend the current date to a task automatically when it's added.
-.TP
 .B \-v
 Verbose mode turns on confirmation messages
 .TP
@@ -178,11 +200,15 @@ Same as option \-n (0) or \-N (1).
 .B TODOTXT_PLAIN
 Same as option \-p (1) or \-c (0).
 .TP
-.B TODOTXT_DATE_ON_ADD
-Same as option \-t (1) or \-T (0).
-.TP
 .B TODOTXT_PRIORITY_ON_ADD=pri
 Default priority A\-Z.
+.TP
+.B GTDO_ENABLE_UUID
+Same as the
+.B enable_uuid
+behavior setting. When enabled, new tasks receive UTC timestamp IDs in the
+.B YYYYMMDDTHHMMSS.nnZ
+format.
 .TP
 .B TODOTXT_VERBOSE=1
 Same as option \-v.
