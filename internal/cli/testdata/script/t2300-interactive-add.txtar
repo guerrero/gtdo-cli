@@ -1,0 +1,71 @@
+# candidates are a union of todo.txt and done.txt; report.txt is a decoy
+stdin interactive.in
+exec gtdo add -i
+cmp stdout interactive.want
+cmp stderr empty.want
+cmp todo.txt interactive.todo.want
+cmp done.txt done.want
+
+stdin guided.in
+exec gtdo add -g
+cmp stdout guided.want
+cmp stderr empty.want
+cmp todo.txt guided.todo.want
+cmp done.txt done.want
+
+stdin context-only.in
+exec gtdo add -g --only context
+cmp stdout context-only.want
+cmp stderr empty.want
+cmp todo.txt context-only.todo.want
+cmp done.txt done.want
+
+! exec status1 gtdo add -i extra text
+cmp stdout empty.want
+cmp stderr invalid.stderr.want
+cmp todo.txt context-only.todo.want
+cmp done.txt done.want
+
+-- todo.txt --
+current @home +gtdo due:today
+-- done.txt --
+old @phone +legacy status:done
+-- report.txt --
+report @ignored +ignored
+-- interactive.in --
+follow up @phone +legacy
+-- guided.in --
+review current @home
+due:tomorrow
+
++gtdo +legacy
+@home @phone @ignored
+-- context-only.in --
+quick check @home
+@home @phone @ignored
+-- interactive.want --
+2 follow up @phone +legacy
+TODO: 2 added.
+-- interactive.todo.want --
+current @home +gtdo due:today
+follow up @phone +legacy
+-- guided.want --
+3 review current @home due:tomorrow +gtdo +legacy @phone
+TODO: 3 added.
+-- guided.todo.want --
+current @home +gtdo due:today
+follow up @phone +legacy
+review current @home due:tomorrow +gtdo +legacy @phone
+-- context-only.want --
+4 quick check @home @phone
+TODO: 4 added.
+-- context-only.todo.want --
+current @home +gtdo due:today
+follow up @phone +legacy
+review current @home due:tomorrow +gtdo +legacy @phone
+quick check @home @phone
+-- done.want --
+old @phone +legacy status:done
+-- invalid.stderr.want --
+usage: gtdo add [-i|--interactive|-g|--guided] [--only metadata|project|context]
+-- empty.want --

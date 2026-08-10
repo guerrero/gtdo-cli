@@ -8,6 +8,7 @@ import (
 	"github.com/rogpeppe/go-internal/testscript"
 
 	"github.com/guerrero/gtdo/internal/cli"
+	statushelper "github.com/guerrero/gtdo/internal/cli/testdata/script"
 )
 
 func TestMain(m *testing.M) {
@@ -15,6 +16,7 @@ func TestMain(m *testing.M) {
 		"gtdo": func() {
 			os.Exit(cli.Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 		},
+		"status1": statushelper.Main,
 	})
 }
 

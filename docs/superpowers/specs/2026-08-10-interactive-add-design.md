@@ -36,14 +36,18 @@ The mode options are parsed as action-local options after `add`; existing
 global getopts-style flags continue to be parsed before the action. Guided
 mode does not accept positional task text, and interactive mode does not
 accept positional task text; invalid combinations use the existing usage
-error path and write nothing.
+error path and write nothing. Because `-f` explicitly suppresses interactive
+input for legacy actions, combining `-f` with either new mode is also a usage
+error rather than a silent no-op.
 
 ## Candidate sources
 
 Completion and selection data are collected from the two configured
 task-bearing paths: `Config.TodoFile` and `Config.DoneFile`. `ReportFile` is
 not scanned. Each existing readable file is read best-effort; a missing or
-unreadable file contributes no candidates and does not create a file.
+unreadable file contributes no candidates. The collector itself never creates
+candidate files; normal add startup may still ensure the configured files as
+it does for every existing add action.
 
 The collector extracts and deduplicates:
 

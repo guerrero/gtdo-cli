@@ -72,10 +72,31 @@ func TestManPageHasTheSectionsCobraDoesNotEmit(t *testing.T) {
 
 	for _, section := range []string{
 		".SH NAME", ".SH SYNOPSIS", ".SH DESCRIPTION", ".SH COMMANDS",
-		".SH OPTIONS", ".SH CONFIGURATION", ".SH ENVIRONMENT", ".SH FILES", ".SH EXIT STATUS", ".SH SEE ALSO",
+		".SH OPTIONS", ".SH CONFIGURATION", ".SH INTERACTIVE ADD", ".SH ENVIRONMENT", ".SH FILES", ".SH EXIT STATUS", ".SH SEE ALSO",
 	} {
 		if !strings.Contains(string(data), section) {
 			t.Errorf("man/gtdo.1 is missing %s", section)
+		}
+	}
+
+	page := string(data)
+	start := strings.Index(page, ".SH INTERACTIVE ADD\n")
+	if start < 0 {
+		t.Fatal("man/gtdo.1 has no INTERACTIVE ADD section")
+	}
+	end := strings.Index(page[start+len(".SH INTERACTIVE ADD\n"):], ".SH OPTIONS\n")
+	if end < 0 {
+		t.Fatal("man/gtdo.1 has no bounded INTERACTIVE ADD section")
+	}
+	interactive := page[start : start+len(".SH INTERACTIVE ADD\n")+end]
+	for _, text := range []string{".B \\-i\n", ".B \\-g\n", ".B --only\n"} {
+		if !strings.Contains(interactive, text) {
+			t.Errorf("INTERACTIVE ADD section is missing %q", text)
+		}
+	}
+	for _, text := range []string{"configured\n.B todo_file\nand\n.B done_file", "gtdo add \\-i", "gtdo add \\-g"} {
+		if !strings.Contains(interactive, text) {
+			t.Errorf("man/gtdo.1 is missing %q", text)
 		}
 	}
 }

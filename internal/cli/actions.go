@@ -35,7 +35,7 @@ func registerActions(root *cobra.Command, cfg *config.Config) {
 		use:     `add "THING I NEED TO DO +project @context"`,
 		aliases: []string{"a"},
 		short:   "Add a TODO item to todo.txt.",
-		long:    "Adds THING I NEED TO DO to your todo.txt file on its own line.\nProject and context notation optional.\nQuotes optional.",
+		long:    "Adds THING I NEED TO DO to your todo.txt file on its own line.\nProject and context notation optional.\nQuotes optional.\nInteractive modes: -i|--interactive adds one editable task; -g|--guided runs metadata, project, and context phases.\nGuided mode accepts repeatable --only metadata|project|context.",
 		run:     actionAdd,
 	})
 	add(actionSpec{
@@ -130,16 +130,18 @@ func registerActions(root *cobra.Command, cfg *config.Config) {
 // session bundles the resolved configuration, the prepared store, and the
 // I/O streams of one action invocation.
 type session struct {
-	cfg   *config.Config
-	store *todo.Store
-	in    io.Reader
-	out   io.Writer
-	errw  io.Writer
+	cfg    *config.Config
+	store  *todo.Store
+	in     io.Reader
+	reader *bufio.Reader
+	out    io.Writer
+	errw   io.Writer
 }
 
 // newSession prepares the store for one action invocation: the files are
 // created on demand, mirroring todo.sh's startup sanity checks (§6.5).
 func newSession(cmd *cobra.Command, cfg *config.Config) (*session, error) {
+	in := cmd.InOrStdin()
 	st := &todo.Store{
 		Policy: todo.SigilPolicy{
 			AllowedContexts: cfg.AllowedContexts,
@@ -161,11 +163,12 @@ func newSession(cmd *cobra.Command, cfg *config.Config) (*session, error) {
 		return nil, exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
 	}
 	return &session{
-		cfg:   cfg,
-		store: st,
-		in:    cmd.InOrStdin(),
-		out:   cmd.OutOrStdout(),
-		errw:  cmd.ErrOrStderr(),
+		cfg:    cfg,
+		store:  st,
+		in:     in,
+		reader: bufio.NewReader(in),
+		out:    cmd.OutOrStdout(),
+		errw:   cmd.ErrOrStderr(),
 	}, nil
 }
 
@@ -238,11 +241,17 @@ func (s *session) prompt(p string) {
 // readLine reads one line of stdin like `read -r`: the newline is
 // stripped, backslashes are literal, and EOF yields the empty string.
 func (s *session) readLine() string {
-	line, err := bufio.NewReader(s.in).ReadString('\n')
-	if err != nil && line == "" {
-		return ""
+	line, _ := s.readLineErr()
+	return line
+}
+
+// readLineErr is readLine's error-preserving form. Both methods share the
+// session reader so bufio cannot prefetch and discard later phase input.
+func (s *session) readLineErr() (string, error) {
+	if s.reader == nil {
+		s.reader = bufio.NewReader(s.in)
 	}
-	return strings.TrimSuffix(line, "\n")
+	return readBufferedLine(s.reader)
 }
 
 // confirm asks a y/n question, todo.sh's confirm(): with -f it answers
