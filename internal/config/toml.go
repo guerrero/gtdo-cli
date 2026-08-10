@@ -22,16 +22,18 @@ type pathsTOML struct {
 // behaviorTOML is the [behavior] section. There is deliberately no plain
 // key: §5.2 reserves plain for the CLI flags and TODOTXT_PLAIN.
 type behaviorTOML struct {
-	Force               bool   `toml:"force"`
-	PreserveLineNumbers bool   `toml:"preserve_line_numbers"`
-	AutoArchive         bool   `toml:"auto_archive"`
-	DateOnAdd           bool   `toml:"date_on_add"`
-	PriorityOnAdd       string `toml:"priority_on_add"`
-	Verbose             int    `toml:"verbose"`
-	DefaultAction       string `toml:"default_action"`
-	SourceVar           string `toml:"sourcevar"`
-	SentenceDelimiters  string `toml:"sentence_delimiters"`
-	TaskFormat          string `toml:"task_format"`
+	Force               bool     `toml:"force"`
+	PreserveLineNumbers bool     `toml:"preserve_line_numbers"`
+	AutoArchive         bool     `toml:"auto_archive"`
+	DateOnAdd           bool     `toml:"date_on_add"`
+	PriorityOnAdd       string   `toml:"priority_on_add"`
+	Verbose             int      `toml:"verbose"`
+	DefaultAction       string   `toml:"default_action"`
+	SourceVar           string   `toml:"sourcevar"`
+	SentenceDelimiters  string   `toml:"sentence_delimiters"`
+	TaskFormat          string   `toml:"task_format"`
+	AllowedContexts     []string `toml:"allowed_contexts"`
+	AllowedProjects     []string `toml:"allowed_projects"`
 }
 
 // colorsTOML is the [colors] section plus its [colors.map] sub-table.

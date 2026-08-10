@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -100,6 +101,12 @@ func TestDefaults(t *testing.T) {
 	if cfg.TaskFormat != DefaultTaskFormat {
 		t.Errorf("TaskFormat = %q, want %q", cfg.TaskFormat, DefaultTaskFormat)
 	}
+	if cfg.AllowedContexts != nil {
+		t.Errorf("AllowedContexts = %#v, want nil", cfg.AllowedContexts)
+	}
+	if cfg.AllowedProjects != nil {
+		t.Errorf("AllowedProjects = %#v, want nil", cfg.AllowedProjects)
+	}
 	if cfg.Plain {
 		t.Error("Plain = true, want false")
 	}
@@ -112,6 +119,32 @@ func TestTaskFormatFromTOML(t *testing.T) {
 	want := "[project][content][keywords][context]"
 	if cfg.TaskFormat != want {
 		t.Errorf("TaskFormat = %q, want %q", cfg.TaskFormat, want)
+	}
+}
+
+func TestAllowedSigilConfig(t *testing.T) {
+	h := home(t)
+
+	cfg := loadWith(t, withOpts(t, Options{}, `[behavior]
+allowed_contexts = ["@work", "@home"]
+allowed_projects = ["+gtdo"]
+`), h)
+	if !reflect.DeepEqual(cfg.AllowedContexts, []string{"@work", "@home"}) {
+		t.Fatalf("AllowedContexts = %#v", cfg.AllowedContexts)
+	}
+	if !reflect.DeepEqual(cfg.AllowedProjects, []string{"+gtdo"}) {
+		t.Fatalf("AllowedProjects = %#v", cfg.AllowedProjects)
+	}
+
+	empty := loadWith(t, withOpts(t, Options{}, `[behavior]
+allowed_contexts = []
+allowed_projects = []
+`), h)
+	if empty.AllowedContexts == nil || len(empty.AllowedContexts) != 0 {
+		t.Fatalf("explicit empty contexts = %#v, want non-nil empty slice", empty.AllowedContexts)
+	}
+	if empty.AllowedProjects == nil || len(empty.AllowedProjects) != 0 {
+		t.Fatalf("explicit empty projects = %#v, want non-nil empty slice", empty.AllowedProjects)
 	}
 }
 
@@ -456,6 +489,8 @@ verbose = 2
 default_action = "list"
 sourcevar = "~/done.txt"
 sentence_delimiters = ".;"
+allowed_contexts = ["@work", "@home"]
+allowed_projects = ["+gtdo"]
 
 [colors]
 pri_a = "yellow"
@@ -491,6 +526,12 @@ yellow = "\\033[1;43m"
 	if cfg.PriorityOnAdd != "B" || cfg.Verbose != 2 || cfg.DefaultAction != "list" || cfg.SourceVar != "~/done.txt" || cfg.SentenceDelimiters != ".;" {
 		t.Errorf("strings = %q/%d/%q/%q/%q, want B/2/list/~/done.txt/.;",
 			cfg.PriorityOnAdd, cfg.Verbose, cfg.DefaultAction, cfg.SourceVar, cfg.SentenceDelimiters)
+	}
+	if !reflect.DeepEqual(cfg.AllowedContexts, []string{"@work", "@home"}) {
+		t.Errorf("AllowedContexts = %#v", cfg.AllowedContexts)
+	}
+	if !reflect.DeepEqual(cfg.AllowedProjects, []string{"+gtdo"}) {
+		t.Errorf("AllowedProjects = %#v", cfg.AllowedProjects)
 	}
 
 	if got := cfg.Color("pri_a"); got != "\x1b[1;43m" {
