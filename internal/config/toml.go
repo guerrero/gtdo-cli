@@ -31,6 +31,7 @@ type behaviorTOML struct {
 	DefaultAction       string `toml:"default_action"`
 	SourceVar           string `toml:"sourcevar"`
 	SentenceDelimiters  string `toml:"sentence_delimiters"`
+	TaskFormat          string `toml:"task_format"`
 }
 
 // colorsTOML is the [colors] section plus its [colors.map] sub-table.

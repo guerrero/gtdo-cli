@@ -54,6 +54,7 @@ type Config struct {
 	DefaultAction       string
 	SourceVar           string
 	SentenceDelimiters  string
+	TaskFormat          string
 
 	// Plain disables all color output (flag -p/-c, TODOTXT_PLAIN).
 	Plain bool
@@ -119,6 +120,7 @@ func resolve(opts Options, f fileConfig, home string) Config {
 		DefaultAction:       pickString("TODOTXT_DEFAULT_ACTION", f.Behavior.DefaultAction),
 		SourceVar:           pickString("TODOTXT_SOURCEVAR", f.Behavior.SourceVar),
 		SentenceDelimiters:  pickString("SENTENCE_DELIMITERS", f.Behavior.SentenceDelimiters),
+		TaskFormat:          f.Behavior.TaskFormat,
 	}
 	// The -v rule (§5.3): TODOTXT_VERBOSE wins when it is defined; otherwise
 	// max(1, -v count) wins over the TOML value, which defaults to 1.

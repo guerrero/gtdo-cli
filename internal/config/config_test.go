@@ -97,8 +97,21 @@ func TestDefaults(t *testing.T) {
 	if cfg.SentenceDelimiters != ",.:;" {
 		t.Errorf("SentenceDelimiters = %q, want %q", cfg.SentenceDelimiters, ",.:;")
 	}
+	if cfg.TaskFormat != DefaultTaskFormat {
+		t.Errorf("TaskFormat = %q, want %q", cfg.TaskFormat, DefaultTaskFormat)
+	}
 	if cfg.Plain {
 		t.Error("Plain = true, want false")
+	}
+}
+
+func TestTaskFormatFromTOML(t *testing.T) {
+	h := home(t)
+	body := "[behavior]\ntask_format = \"[project][content][keywords][context]\"\n"
+	cfg := loadWith(t, withOpts(t, Options{}, body), h)
+	want := "[project][content][keywords][context]"
+	if cfg.TaskFormat != want {
+		t.Errorf("TaskFormat = %q, want %q", cfg.TaskFormat, want)
 	}
 }
 

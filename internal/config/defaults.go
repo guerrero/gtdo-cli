@@ -1,5 +1,7 @@
 package config
 
+const DefaultTaskFormat = "[checked][priority][uuid][content][keywords][project][context]"
+
 // defaultFileConfig returns the §5.2 schema pre-filled with todo.sh's
 // defaults (todo.sh lines ~659-712). Paths stay empty on purpose: their
 // defaults derive from the resolved dir, like todo.cfg's
@@ -11,6 +13,7 @@ func defaultFileConfig() fileConfig {
 			AutoArchive:         true,
 			Verbose:             1,
 			SentenceDelimiters:  ",.:;",
+			TaskFormat:          DefaultTaskFormat,
 		},
 		Colors: defaultColors(),
 	}
