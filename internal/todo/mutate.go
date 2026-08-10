@@ -43,16 +43,33 @@ func (s *Store) Add(text string, dateOnAdd bool, priorityOnAdd string, now time.
 // task, like `IFS=$'\n'; for line in $input` (t2000 'actual multiline
 // add').
 func (s *Store) Addm(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) ([]AddResult, error) {
-	var results []AddResult
+	var pending []string
 	for _, line := range strings.Split(text, "\n") {
 		if line == "" {
 			continue
 		}
-		res, err := s.addTo(s.TodoFile, line, dateOnAdd, priorityOnAdd, now)
-		if err != nil {
-			return results, err
+		pending = append(pending, prepareAdd(line, dateOnAdd, priorityOnAdd, now))
+	}
+	if len(pending) == 0 {
+		return nil, nil
+	}
+
+	lines, _, err := readLines(s.TodoFile)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]AddResult, 0, len(pending))
+	for _, candidate := range pending {
+		lineNumber := len(lines) + len(results) + 1
+		if err := s.Policy.Validate(s.TodoFile, lineNumber, candidate); err != nil {
+			return nil, err
 		}
-		results = append(results, res)
+		results = append(results, AddResult{LineNumber: lineNumber, Text: candidate})
+	}
+	// As with repeated _addto calls, a missing end-of-line is repaired when
+	// a batch supplies its first task.
+	if err := writeLines(s.TodoFile, append(lines, pending...), true); err != nil {
+		return nil, err
 	}
 	return results, nil
 }
@@ -76,16 +93,12 @@ func (s *Store) Addto(dest, text string, dateOnAdd bool, priorityOnAdd string, n
 // the date after an existing priority, prepend priority_on_add, fix a
 // missing end of line, append, and return the new line number.
 func (s *Store) addTo(file, text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (AddResult, error) {
-	input := cleanInput(text)
-	input = uppercasePriority(input)
-	if dateOnAdd {
-		input = dateOnAddRe.ReplaceAllString(input, "${1}"+now.Format("2006-01-02")+" ")
-	}
-	if priorityOnAdd != "" && !priorityOnAddRe.MatchString(input) {
-		input = "(" + priorityOnAdd + ") " + input
-	}
 	lines, _, err := readLines(file)
 	if err != nil {
+		return AddResult{}, err
+	}
+	input := prepareAdd(text, dateOnAdd, priorityOnAdd, now)
+	if err := s.Policy.Validate(file, len(lines)+1, input); err != nil {
 		return AddResult{}, err
 	}
 	// fixMissingEndOfLine is implicit: writing with a final newline gives
@@ -94,6 +107,19 @@ func (s *Store) addTo(file, text string, dateOnAdd bool, priorityOnAdd string, n
 		return AddResult{}, err
 	}
 	return AddResult{LineNumber: len(lines) + 1, Text: input}, nil
+}
+
+// prepareAdd applies todo.sh's add transformations before a candidate is
+// validated or persisted.
+func prepareAdd(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) string {
+	input := uppercasePriority(cleanInput(text))
+	if dateOnAdd {
+		input = dateOnAddRe.ReplaceAllString(input, "${1}"+now.Format("2006-01-02")+" ")
+	}
+	if priorityOnAdd != "" && !priorityOnAddRe.MatchString(input) {
+		input = "(" + priorityOnAdd + ") " + input
+	}
+	return input
 }
 
 // cleanInput maps CR and LF to spaces, todo.sh's cleaninput: tasks always
@@ -128,6 +154,9 @@ func (s *Store) Append(item int, text string) (string, error) {
 		appendSpace = ""
 	}
 	newText := task.Text + appendSpace + cleanInput(text)
+	if err := s.Policy.Validate(s.TodoFile, item, newText); err != nil {
+		return "", err
+	}
 	if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 		// The exact todo.sh die text, contract (§6.3 append).
 		return "", fmt.Errorf("TODO: Error appending task %d.", item) //nolint:revive,staticcheck
@@ -177,6 +206,9 @@ func (s *Store) replaceOrPrepend(item int, text string, isReplace bool) (string,
 	newText := priority + prepdate + input
 	if !isReplace {
 		newText += " " + rest
+	}
+	if err := s.Policy.Validate(s.TodoFile, item, newText); err != nil {
+		return "", "", err
 	}
 	if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 		return "", "", err
