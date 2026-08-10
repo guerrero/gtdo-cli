@@ -120,7 +120,7 @@ cmp stdout help-vv.want
       Marks task(s) on line NR as done in todo.txt.
 
     format [FILE]
-      Rewrites todo.txt and done.txt using the task_format configuration.
+      Rewrites todo.txt and done.txt using the taskFormat configuration.
       If FILE is specified, rewrites only that file.
 
     help [ACTION...]
@@ -190,3 +190,4 @@ cmp stdout help-vv.want
     shorthelp
       List the one-line usage of all built-in actions.
 
+-- .codex-eof --

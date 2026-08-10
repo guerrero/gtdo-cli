@@ -5,14 +5,14 @@ cmp todo.txt default.todo
 cmp done.txt default.done
 
 # A custom template and an explicit relative file affect only that file.
-exec gtdo -d custom.toml format one.txt
+exec gtdo -d custom.json format one.txt
 cmpenv stdout custom.stdout
 cmp one.txt custom.one
 cmp todo.txt default.todo
 
 # Quiet mode suppresses success messages while still rewriting successfully.
 env TODOTXT_VERBOSE=0
-exec gtdo -d custom.toml format one.txt
+exec gtdo -d custom.json format one.txt
 stdout '^$'
 
 # Explicit targets must exist and only one target argument is accepted.
@@ -22,13 +22,13 @@ stderr 'TODO: File .*missing.txt does not exist\.'
 stderr '^usage: gtdo format \[FILE\]$'
 
 # Invalid templates fail before any file is rewritten.
-! exec gtdo -d invalid.toml format
+! exec gtdo -d invalid.json format
 stderr '^invalid task format: unknown field "unknown"$'
 cmp todo.txt default.todo
 
 # An explicit configured target is validated before session setup can create it.
 env TODOTXT_VERBOSE=1
-! exec gtdo -d missing-configured.toml format missing.txt
+! exec gtdo -d missing-configured.json format missing.txt
 cmpenv stderr missing-configured.stderr
 ! exists missing-configured/missing.txt
 ! exists missing-configured/done.txt
@@ -37,19 +37,19 @@ cmpenv stderr missing-configured.stderr
 # A configured directory reports the regular-file error without startup writes.
 mkdir configured-directory
 cp directory-child.want configured-directory/child.txt
-! exec gtdo -d directory.toml format configured-directory
+! exec gtdo -d directory.json format configured-directory
 cmpenv stderr directory.stderr
 cmp configured-directory/child.txt directory-child.want
 cmp directory-peer.txt directory-peer.want
 ! exists directory-report.txt
 
 # An absolute explicit target is kept unchanged rather than joined to TODO_DIR.
-exec gtdo -d absolute.toml format $WORK/absolute.txt
+exec gtdo -d absolute.json format $WORK/absolute.txt
 cmpenv stdout absolute.stdout
 cmp absolute.txt absolute.want
 
 # Equal configured targets are formatted and reported only once.
-exec gtdo -d dedupe.toml format
+exec gtdo -d dedupe.json format
 cmp stdout dedupe.stdout
 cmp same.txt same.want
 
@@ -68,33 +68,22 @@ TODO: $HOME/done.txt formatted.
 plain item
 -- default.done --
 x 20260808T143045.12Z finish key:done +archive @desk
--- custom.toml --
-[paths]
-dir = "."
-
-[behavior]
-task_format = "[project][content][keywords][context][uuid][priority][checked]"
+-- custom.json --
+{"dir":".","behaviour":{"taskFormat":"[project][content][keywords][context][uuid][priority][checked]"}}
 -- one.txt --
 x 2026-08-08 finish key:done +archive @desk 20260808T143045.12Z
 -- custom.stdout --
 TODO: $HOME/one.txt formatted.
 -- custom.one --
 +archive finish key:done @desk 20260808T143045.12Z x
--- invalid.toml --
-[behavior]
-task_format = "[unknown]"
--- missing-configured.toml --
-[paths]
-dir = "missing-configured"
-todo_file = "missing-configured/missing.txt"
+-- invalid.json --
+{"behaviour":{"taskFormat":"[unknown]"}}
+-- missing-configured.json --
+{"dir":"missing-configured","files":{"todo":"missing-configured/missing.txt"}}
 -- missing-configured.stderr --
 TODO: File $WORK/missing-configured/missing.txt does not exist.
--- directory.toml --
-[paths]
-dir = "."
-todo_file = "configured-directory"
-done_file = "directory-peer.txt"
-report_file = "directory-report.txt"
+-- directory.json --
+{"dir":".","files":{"todo":"configured-directory","done":"directory-peer.txt","report":"directory-report.txt"}}
 -- directory.stderr --
 TODO: File $WORK/configured-directory is not a regular file.
 -- directory-child.want --
@@ -103,21 +92,16 @@ leave directory contents alone
 @desk leave peer +work
 -- directory-peer.want --
 @desk leave peer +work
--- absolute.toml --
-[paths]
-dir = "absolute-config"
+-- absolute.json --
+{"dir":"absolute-config"}
 -- absolute.txt --
 @desk absolute task +work
 -- absolute.stdout --
 TODO: $WORK/absolute.txt formatted.
 -- absolute.want --
 absolute task +work @desk
--- dedupe.toml --
-[paths]
-dir = "."
-todo_file = "same.txt"
-done_file = "same.txt"
-report_file = "same-report.txt"
+-- dedupe.json --
+{"dir":".","files":{"todo":"same.txt","done":"same.txt","report":"same-report.txt"}}
 -- same.txt --
 @desk shared task +work
 -- dedupe.stdout --

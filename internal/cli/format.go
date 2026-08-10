@@ -16,7 +16,7 @@ func registerFormatAction(root *cobra.Command, cfg *config.Config) {
 	root.AddCommand(newAction(actionSpec{
 		use:   "format [FILE]",
 		short: "Rewrite task files using the configured format.",
-		long:  "Rewrites todo.txt and done.txt using the task_format configuration.\nIf FILE is specified, rewrites only that file.",
+		long:  "Rewrites todo.txt and done.txt using the taskFormat configuration.\nIf FILE is specified, rewrites only that file.",
 		run:   actionFormat,
 	}, cfg))
 }
