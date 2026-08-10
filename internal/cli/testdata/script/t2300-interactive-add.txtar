@@ -20,7 +20,7 @@ cmp stderr empty.want
 cmp todo.txt context-only.todo.want
 cmp done.txt done.want
 
-! exec sh -c 'gtdo add -i extra text; status=$?; if test "$status" -eq 1; then exit 1; else exit 0; fi'
+! exec status1 gtdo add -i extra text
 cmp stdout empty.want
 cmp stderr invalid.stderr.want
 cmp todo.txt context-only.todo.want
