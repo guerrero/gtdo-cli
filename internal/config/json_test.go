@@ -29,15 +29,18 @@ func TestDecodeFileConfig(t *testing.T) {
 
 func TestDecodeFileConfigRejectsInvalidDocuments(t *testing.T) {
 	cases := map[string]string{
-		"malformed":         `{"dir":`,
-		"trailing value":    `{} {}`,
-		"unknown top level": `{"paths":{}}`,
-		"unknown nested":    `{"behaviour":{"preserve_line_numbers":true}}`,
-		"wrong type":        `{"behaviour":{"verbose":"loud"}}`,
-		"null scalar":       `{"dir":null}`,
-		"null object":       `{"files":null}`,
-		"null map value":    `{"colors":{"map":{"red":null}}}`,
-		"incorrect nesting": `{"files":{"todo":{"file":"todo.txt"}}}`,
+		"malformed":           `{"dir":`,
+		"trailing value":      `{} {}`,
+		"unknown top level":   `{"paths":{}}`,
+		"unknown nested":      `{"behaviour":{"preserve_line_numbers":true}}`,
+		"mis-cased top level": `{"Behaviour":{"verbose":2}}`,
+		"mis-cased scalar":    `{"DIR":"~/todo"}`,
+		"mis-cased nested":    `{"colors":{"PriA":"yellow"}}`,
+		"wrong type":          `{"behaviour":{"verbose":"loud"}}`,
+		"null scalar":         `{"dir":null}`,
+		"null object":         `{"files":null}`,
+		"null map value":      `{"colors":{"map":{"red":null}}}`,
+		"incorrect nesting":   `{"files":{"todo":{"file":"todo.txt"}}}`,
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type filesJSON struct {
@@ -76,10 +77,63 @@ func decodeFileConfig(data []byte, dst *fileConfig) error {
 	if containsJSONNull(raw) {
 		return errors.New("null is not allowed in configuration")
 	}
+	if err := validateFileConfigKeys(raw); err != nil {
+		return err
+	}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	return decoder.Decode(dst)
+}
+
+func validateFileConfigKeys(raw any) error {
+	root, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	if err := validateJSONObjectKeys(root, map[string]struct{}{
+		"dir": {}, "files": {}, "behaviour": {}, "colors": {},
+	}); err != nil {
+		return err
+	}
+	if files, ok := root["files"].(map[string]any); ok {
+		if err := validateJSONObjectKeys(files, map[string]struct{}{
+			"todo": {}, "done": {}, "report": {},
+		}); err != nil {
+			return err
+		}
+	}
+	if behaviour, ok := root["behaviour"].(map[string]any); ok {
+		if err := validateJSONObjectKeys(behaviour, map[string]struct{}{
+			"force": {}, "preserveLineNumbers": {}, "autoArchive": {}, "dateOnAdd": {},
+			"priorityOnAdd": {}, "verbose": {}, "defaultAction": {}, "sourceVar": {},
+			"sentenceDelimiters": {},
+		}); err != nil {
+			return err
+		}
+	}
+	if colors, ok := root["colors"].(map[string]any); ok {
+		if err := validateJSONObjectKeys(colors, map[string]struct{}{
+			"priA": {}, "priB": {}, "priC": {}, "priD": {}, "priE": {}, "priF": {},
+			"priG": {}, "priH": {}, "priI": {}, "priJ": {}, "priK": {}, "priL": {},
+			"priM": {}, "priN": {}, "priO": {}, "priP": {}, "priQ": {}, "priR": {},
+			"priS": {}, "priT": {}, "priU": {}, "priV": {}, "priW": {}, "priX": {},
+			"priY": {}, "priZ": {}, "colorDone": {}, "colorProject": {}, "colorContext": {},
+			"colorDate": {}, "colorNumber": {}, "colorMeta": {}, "map": {},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateJSONObjectKeys(object map[string]any, allowed map[string]struct{}) error {
+	for key := range object {
+		if _, ok := allowed[key]; !ok {
+			return fmt.Errorf("unknown field %q", key)
+		}
+	}
+	return nil
 }
 
 func containsJSONNull(value any) bool {
