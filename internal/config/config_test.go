@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -101,6 +102,12 @@ func TestDefaults(t *testing.T) {
 	if cfg.TaskFormat != DefaultTaskFormat {
 		t.Errorf("TaskFormat = %q, want %q", cfg.TaskFormat, DefaultTaskFormat)
 	}
+	if cfg.AllowedContexts != nil {
+		t.Errorf("AllowedContexts = %#v, want nil", cfg.AllowedContexts)
+	}
+	if cfg.AllowedProjects != nil {
+		t.Errorf("AllowedProjects = %#v, want nil", cfg.AllowedProjects)
+	}
 	if cfg.Plain {
 		t.Error("Plain = true, want false")
 	}
@@ -113,6 +120,26 @@ func TestTaskFormatFromJSON(t *testing.T) {
 	want := "[project][content][keywords][context]"
 	if cfg.TaskFormat != want {
 		t.Errorf("TaskFormat = %q, want %q", cfg.TaskFormat, want)
+	}
+}
+
+func TestAllowedSigilConfig(t *testing.T) {
+	h := home(t)
+
+	cfg := loadWith(t, withOpts(t, Options{}, `{"behaviour":{"allowedContexts":["@work","@home"],"allowedProjects":["+gtdo"]}}`), h)
+	if !reflect.DeepEqual(cfg.AllowedContexts, []string{"@work", "@home"}) {
+		t.Fatalf("AllowedContexts = %#v", cfg.AllowedContexts)
+	}
+	if !reflect.DeepEqual(cfg.AllowedProjects, []string{"+gtdo"}) {
+		t.Fatalf("AllowedProjects = %#v", cfg.AllowedProjects)
+	}
+
+	empty := loadWith(t, withOpts(t, Options{}, `{"behaviour":{"allowedContexts":[],"allowedProjects":[]}}`), h)
+	if empty.AllowedContexts == nil || len(empty.AllowedContexts) != 0 {
+		t.Fatalf("explicit empty contexts = %#v, want non-nil empty slice", empty.AllowedContexts)
+	}
+	if empty.AllowedProjects == nil || len(empty.AllowedProjects) != 0 {
+		t.Fatalf("explicit empty projects = %#v, want non-nil empty slice", empty.AllowedProjects)
 	}
 }
 
@@ -443,7 +470,7 @@ func TestPathExpansion(t *testing.T) {
 // TestJSONFullSchema decodes every key of the §5.2 schema at once.
 func TestJSONFullSchema(t *testing.T) {
 	h := home(t)
-	body := `{"dir":"~/todo","files":{"todo":"~/todo/todo.txt","done":"~/todo/done.txt","report":"~/todo/report.txt"},"behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"~/done.txt","sentenceDelimiters":".;"},"colors":{"priA":"yellow","priB":"\\033[0;32m","colorProject":"light_cyan","colorMeta":"","map":{"yellow":"\\033[1;43m"}}}`
+	body := `{"dir":"~/todo","files":{"todo":"~/todo/todo.txt","done":"~/todo/done.txt","report":"~/todo/report.txt"},"behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"~/done.txt","sentenceDelimiters":".;","allowedContexts":["@work","@home"],"allowedProjects":["+gtdo"]},"colors":{"priA":"yellow","priB":"\\033[0;32m","colorProject":"light_cyan","colorMeta":"","map":{"yellow":"\\033[1;43m"}}}`
 	path := writeConfig(t, filepath.Join(t.TempDir(), "config.json"), body)
 	cfg := loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "nonexistent", "config.json"))
 
@@ -469,6 +496,12 @@ func TestJSONFullSchema(t *testing.T) {
 	if cfg.PriorityOnAdd != "B" || cfg.Verbose != 2 || cfg.DefaultAction != "list" || cfg.SourceVar != "~/done.txt" || cfg.SentenceDelimiters != ".;" {
 		t.Errorf("strings = %q/%d/%q/%q/%q, want B/2/list/~/done.txt/.;",
 			cfg.PriorityOnAdd, cfg.Verbose, cfg.DefaultAction, cfg.SourceVar, cfg.SentenceDelimiters)
+	}
+	if !reflect.DeepEqual(cfg.AllowedContexts, []string{"@work", "@home"}) {
+		t.Errorf("AllowedContexts = %#v", cfg.AllowedContexts)
+	}
+	if !reflect.DeepEqual(cfg.AllowedProjects, []string{"+gtdo"}) {
+		t.Errorf("AllowedProjects = %#v", cfg.AllowedProjects)
 	}
 
 	if got := cfg.Color("pri_a"); got != "\x1b[1;43m" {

@@ -14,16 +14,18 @@ type filesJSON struct {
 }
 
 type behaviourJSON struct {
-	Force               bool   `json:"force"`
-	PreserveLineNumbers bool   `json:"preserveLineNumbers"`
-	AutoArchive         bool   `json:"autoArchive"`
-	DateOnAdd           bool   `json:"dateOnAdd"`
-	PriorityOnAdd       string `json:"priorityOnAdd"`
-	Verbose             int    `json:"verbose"`
-	DefaultAction       string `json:"defaultAction"`
-	SourceVar           string `json:"sourceVar"`
-	SentenceDelimiters  string `json:"sentenceDelimiters"`
-	TaskFormat          string `json:"taskFormat"`
+	Force               bool     `json:"force"`
+	PreserveLineNumbers bool     `json:"preserveLineNumbers"`
+	AutoArchive         bool     `json:"autoArchive"`
+	DateOnAdd           bool     `json:"dateOnAdd"`
+	PriorityOnAdd       string   `json:"priorityOnAdd"`
+	Verbose             int      `json:"verbose"`
+	DefaultAction       string   `json:"defaultAction"`
+	SourceVar           string   `json:"sourceVar"`
+	SentenceDelimiters  string   `json:"sentenceDelimiters"`
+	TaskFormat          string   `json:"taskFormat"`
+	AllowedContexts     []string `json:"allowedContexts"`
+	AllowedProjects     []string `json:"allowedProjects"`
 }
 
 type colorsJSON struct {
@@ -108,7 +110,7 @@ func validateFileConfigKeys(raw any) error {
 		if err := validateJSONObjectKeys(behaviour, map[string]struct{}{
 			"force": {}, "preserveLineNumbers": {}, "autoArchive": {}, "dateOnAdd": {},
 			"priorityOnAdd": {}, "verbose": {}, "defaultAction": {}, "sourceVar": {},
-			"sentenceDelimiters": {}, "taskFormat": {},
+			"sentenceDelimiters": {}, "taskFormat": {}, "allowedContexts": {}, "allowedProjects": {},
 		}); err != nil {
 			return err
 		}

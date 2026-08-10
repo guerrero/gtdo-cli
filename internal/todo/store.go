@@ -30,6 +30,10 @@ type Store struct {
 	// SentenceDelimiters mirrors SENTENCE_DELIMITERS: append inserts no
 	// space before text starting with one of these characters.
 	SentenceDelimiters string
+
+	// Policy controls which context and project sigils text mutations may
+	// introduce. Its zero value leaves existing callers unrestricted.
+	Policy SigilPolicy
 }
 
 // Ensure creates TODO_DIR (mkdir -p) and the todo/done/report files when

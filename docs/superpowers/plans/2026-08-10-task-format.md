@@ -6,11 +6,11 @@
 
 **Architecture:** Keep field parsing and template rendering pure in `internal/todo`, with a `TaskFormat` value parsed once from `Config.TaskFormat`. Add a file reformatter that returns rewritten bytes while reusing the existing line/newline model, then let the CLI pre-read all targets and write them only after validation succeeds. Add the action through the existing Cobra action-spec path so help, shorthelp, completion, and the generated man page stay derived from one registration.
 
-**Tech Stack:** Go 1.26.5, Cobra, BurntSushi/toml, go-internal testscript, existing `internal/todo` line store and regex helpers.
+**Tech Stack:** Go 1.26.5, Cobra, encoding/json, go-internal testscript, existing `internal/todo` line store and regex helpers.
 
 ## Global Constraints
 
-- The default configuration is `task_format = "[checked][priority][uuid][content][keywords][project][context]"` under `[behavior]`.
+- The default configuration is `taskFormat = "[checked][priority][uuid][content][keywords][project][context]"` under `behaviour`.
 - The formatter recognizes only `[checked]`, `[priority]`, `[uuid]`, `[content]`, `[keywords]`, `[project]`, and `[context]` placeholders, with optional whitespace between placeholders and no literal text.
 - It inserts one ASCII space between adjacent non-empty fields; absent fields create no leading, trailing, or doubled separator spaces.
 - `[checked]` emits `x` only for a completed line and emits `""` otherwise; an `x YYYY-MM-DD` completion date is consumed and never emitted.
@@ -21,7 +21,7 @@
 - The template is validated and all selected files are read/formatted before any selected file is written.
 - An explicit target must be an existing regular file; malformed templates, missing targets, directories, and too many arguments fail without rewriting task content.
 - Successful formatting prints `TODO: <file> formatted.` per target when verbosity is enabled and prints nothing when `TODOTXT_VERBOSE=0`.
-- `task_format` is TOML-only; it has no environment-variable or global-flag override.
+- `taskFormat` is JSON-only; it has no environment-variable or global-flag override.
 - Existing list, filter, sort, mutation, prompt, exit-code, and output behavior remains unchanged outside the new action/configuration.
 - Every implementation change follows red-green-refactor: write a failing test, run it and observe the expected feature failure, implement the smallest change, run the focused test, then run the relevant package suite.
 - Use Conventional Commit subjects with the repository's allowed scopes; each completed task ends with its own commit.
@@ -31,9 +31,9 @@
 ## File Map
 
 - Modify `internal/config/defaults.go` to define the canonical default template.
-- Modify `internal/config/toml.go` to decode `[behavior].task_format`.
+- Modify `internal/config/json.go` to decode `behaviour.taskFormat`.
 - Modify `internal/config/config.go` to expose the resolved `Config.TaskFormat`.
-- Modify `internal/config/config_test.go` to pin the default and TOML override.
+- Modify `internal/config/config_test.go` to pin the default and JSON override.
 - Create `internal/todo/task_format.go` for the template parser, field extraction, line rendering, and read-only file reformatter.
 - Create `internal/todo/task_format_test.go` for parser, extraction, rendering, and newline-preservation tests.
 - Modify `internal/todo/store.go` to factor its existing line serialization into a reusable byte helper.
@@ -75,14 +75,14 @@ API.
 **Files:**
 
 - Modify: `internal/config/defaults.go`
-- Modify: `internal/config/toml.go`
+- Modify: `internal/config/json.go`
 - Modify: `internal/config/config.go`
 - Test: `internal/config/config_test.go`
 
 **Interfaces:**
 
 - Produces `config.DefaultTaskFormat` and `config.Config.TaskFormat` for the formatter action.
-- Does not add an environment variable or CLI option; TOML is the only override layer.
+- Does not add an environment variable or CLI option; JSON is the only override layer.
 
 - [ ] **Step 1: Write the failing default-config test.**
 
@@ -95,13 +95,13 @@ if cfg.TaskFormat != DefaultTaskFormat {
 }
 ```
 
-Add a dedicated TOML test so the string is covered independently of the
+Add a dedicated JSON test so the string is covered independently of the
 existing bool/string precedence table:
 
 ```go
-func TestTaskFormatFromTOML(t *testing.T) {
+func TestTaskFormatFromJSON(t *testing.T) {
     h := home(t)
-    body := "[behavior]\ntask_format = \"[project][content][keywords][context]\"\n"
+    body := `{"behaviour":{"taskFormat":"[project][content][keywords][context]"}}`
     cfg := loadWith(t, withOpts(t, Options{}, body), h)
     want := "[project][content][keywords][context]"
     if cfg.TaskFormat != want {
@@ -115,13 +115,13 @@ func TestTaskFormatFromTOML(t *testing.T) {
 Run:
 
 ```bash
-go test ./internal/config -run 'TestDefaults|TestTaskFormatFromTOML' -count=1
+go test ./internal/config -run 'TestDefaults|TestTaskFormatFromJSON' -count=1
 ```
 
 Expected: compilation/test failure because `DefaultTaskFormat` and
 `Config.TaskFormat` do not exist yet.
 
-- [ ] **Step 3: Add the default and TOML/resolution wiring.**
+- [ ] **Step 3: Add the default and JSON/resolution wiring.**
 
 In `internal/config/defaults.go`, define:
 
@@ -129,19 +129,19 @@ In `internal/config/defaults.go`, define:
 const DefaultTaskFormat = "[checked][priority][uuid][content][keywords][project][context]"
 ```
 
-Set `TaskFormat: DefaultTaskFormat` in the `behaviorTOML` returned by
-`defaultFileConfig`. Add `TaskFormat string \`toml:"task_format"\`` to
-`behaviorTOML`. Add `TaskFormat string` to `Config` near the other behavior
-strings, and set `TaskFormat: f.Behavior.TaskFormat` in `resolve`. Do not call
+Set `TaskFormat: DefaultTaskFormat` in the `behaviourJSON` returned by
+`defaultFileConfig`. Add `TaskFormat string \`json:"taskFormat"\`` to
+`behaviourJSON`. Add `TaskFormat string` to `Config` near the other behavior
+strings, and set `TaskFormat: f.Behaviour.TaskFormat` in `resolve`. Do not call
 `pickString` or consult an environment variable, because this setting is
-intentionally TOML-only and the default is already present before decoding.
+intentionally JSON-only and the default is already present before decoding.
 
 - [ ] **Step 4: Run the focused tests and the full config package.**
 
 Run:
 
 ```bash
-go test ./internal/config -run 'TestDefaults|TestTaskFormatFromTOML' -count=1
+go test ./internal/config -run 'TestDefaults|TestTaskFormatFromJSON' -count=1
 go test ./internal/config -count=1
 ```
 
@@ -150,7 +150,7 @@ Expected: both commands pass with no warnings.
 - [ ] **Step 5: Commit the configuration change.**
 
 ```bash
-git add internal/config/defaults.go internal/config/toml.go internal/config/config.go internal/config/config_test.go
+git add internal/config/defaults.go internal/config/json.go internal/config/config.go internal/config/config_test.go
 git commit -m "feat(config): add task format setting"
 ```
 
@@ -448,14 +448,14 @@ cmp todo.txt default.todo
 cmp done.txt default.done
 
 # A custom template and an explicit relative file affect only that file.
-exec gtdo -d custom.toml format one.txt
+exec gtdo -d custom.json format one.txt
 cmpenv stdout custom.stdout
 cmp one.txt custom.one
 cmp todo.txt default.todo
 
 # Quiet mode suppresses success messages while still rewriting successfully.
 env TODOTXT_VERBOSE=0
-exec gtdo -d custom.toml format one.txt
+exec gtdo -d custom.json format one.txt
 stdout '^$'
 
 # Explicit targets must exist and only one target argument is accepted.
@@ -465,7 +465,7 @@ stderr 'TODO: File .*missing.txt does not exist\.'
 stderr '^usage: gtdo format \[FILE\]$'
 
 # Invalid templates fail before any file is rewritten.
-! exec gtdo -d invalid.toml format
+! exec gtdo -d invalid.json format
 stderr '^invalid task format: unknown field "unknown"$'
 cmp todo.txt default.todo
 
@@ -484,21 +484,16 @@ TODO: $HOME/done.txt formatted.
 plain item
 -- default.done --
 x 20260808T143045.12Z finish key:done +archive @desk
--- custom.toml --
-[paths]
-dir = "."
-
-[behavior]
-task_format = "[project][content][keywords][context][uuid][priority][checked]"
+-- custom.json --
+{"dir":".","behaviour":{"taskFormat":"[project][content][keywords][context][uuid][priority][checked]"}}
 -- one.txt --
 x 2026-08-08 finish key:done +archive @desk 20260808T143045.12Z
 -- custom.stdout --
 TODO: $HOME/one.txt formatted.
 -- custom.one --
 +archive finish key:done @desk 20260808T143045.12Z x
--- invalid.toml --
-[behavior]
-task_format = "[unknown]"
+-- invalid.json --
+{"behaviour":{"taskFormat":"[unknown]"}}
 ```
 
 The `cmp` commands make the both-file and single-file scope explicit. The
@@ -525,7 +520,7 @@ func registerFormatAction(root *cobra.Command, cfg *config.Config) {
     root.AddCommand(newAction(actionSpec{
         use:   "format [FILE]",
         short: "Rewrite task files using the configured format.",
-        long:  "Rewrites todo.txt and done.txt using the task_format configuration.\nIf FILE is specified, rewrites only that file.",
+        long:  "Rewrites todo.txt and done.txt using the taskFormat configuration.\nIf FILE is specified, rewrites only that file.",
         run:   actionFormat,
     }, cfg))
 }
@@ -622,7 +617,7 @@ Insert the full help block after `do` and before `help`:
 
 ```text
     format [FILE]
-      Rewrites todo.txt and done.txt using the task_format configuration.
+      Rewrites todo.txt and done.txt using the taskFormat configuration.
       If FILE is specified, rewrites only that file.
 ```
 
@@ -633,13 +628,16 @@ or unrelated action text.
 
 - [ ] **Step 3: Document configuration and usage.**
 
-In `README.md`, add `format` to the in-scope action list and extend the TOML
+In `README.md`, add `format` to the in-scope action list and extend the JSON
 example:
 
-```toml
-[behavior]
-verbose = 1
-task_format = "[checked][priority][uuid][content][keywords][project][context]"
+```json
+{
+  "behaviour": {
+    "verbose": 1,
+    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]"
+  }
+}
 ```
 
 Add a short usage paragraph stating that `gtdo format` rewrites both
@@ -653,7 +651,7 @@ Add an `[Unreleased]`/`### Added` changelog bullet in `CHANGELOG.md`:
 ```
 
 In `man/gtdo.1.tmpl`, add a `CONFIGURATION` section documenting
-`[behavior] task_format`, its default value, automatic separators, and the
+`behaviour taskFormat`, its default value, automatic separators, and the
 seven fields. Add a sentence to the command/action description that
 `format [FILE]` rewrites both configured files or the selected file.
 
@@ -708,7 +706,7 @@ metadata.
 - [ ] **Step 3: Run formatting, static checks, and generated-man verification.**
 
 ```bash
-gofmt -w internal/config/defaults.go internal/config/toml.go internal/config/config.go internal/config/config_test.go internal/todo/store.go internal/todo/task_format.go internal/todo/task_format_test.go internal/cli/format.go internal/cli/root.go
+gofmt -w internal/config/defaults.go internal/config/json.go internal/config/config.go internal/config/config_test.go internal/todo/store.go internal/todo/task_format.go internal/todo/task_format_test.go internal/cli/format.go internal/cli/root.go
 git diff --check
 make lint
 make man
@@ -744,7 +742,7 @@ If there is no diff, make no empty commit.
 
 ## Plan Self-Review
 
-- **Spec coverage:** Configuration default/TOML resolution is Task 1; all seven
+- **Spec coverage:** Configuration default/JSON resolution is Task 1; all seven
   fields, separators, checked-date removal, UUID/keyword rules, and custom
   order are Task 2; blank lines and trailing EOL are Task 3; both-file/single-
   file scope, preflight reads, regular-file checks, quiet/success output, and

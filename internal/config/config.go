@@ -55,6 +55,12 @@ type Config struct {
 	SourceVar           string
 	SentenceDelimiters  string
 	TaskFormat          string
+	// AllowedContexts restricts context sigils; nil means unrestricted and an
+	// explicit empty slice means no contexts are allowed.
+	AllowedContexts []string
+	// AllowedProjects restricts project sigils; nil means unrestricted and an
+	// explicit empty slice means no projects are allowed.
+	AllowedProjects []string
 
 	// Plain disables all color output (flag -p/-c, TODOTXT_PLAIN).
 	Plain bool
@@ -121,6 +127,8 @@ func resolve(opts Options, f fileConfig, home string) Config {
 		SourceVar:           pickString("TODOTXT_SOURCEVAR", f.Behaviour.SourceVar),
 		SentenceDelimiters:  pickString("SENTENCE_DELIMITERS", f.Behaviour.SentenceDelimiters),
 		TaskFormat:          f.Behaviour.TaskFormat,
+		AllowedContexts:     f.Behaviour.AllowedContexts,
+		AllowedProjects:     f.Behaviour.AllowedProjects,
 	}
 	// The -v rule (§5.3): TODOTXT_VERBOSE wins when it is defined; otherwise
 	// max(1, -v count) wins over the JSON value, which defaults to 1.

@@ -10,7 +10,7 @@ func TestDecodeFileConfig(t *testing.T) {
 	err := decodeFileConfig([]byte(`{
       "dir":"~/todo",
       "files":{"todo":"todo.txt","done":"done.txt","report":"report.txt"},
-      "behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"done.txt","sentenceDelimiters":".;"},
+      "behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"done.txt","sentenceDelimiters":".;","allowedContexts":["@work"],"allowedProjects":["+gtdo"]},
       "colors":{"priA":"yellow","priZ":"cyan","colorDone":"light_grey","colorProject":"light_cyan","colorContext":"blue","colorDate":"red","colorNumber":"green","colorMeta":"brown","map":{"yellow":"\\033[1;43m"}}
     }`), &cfg)
 	if err != nil {
@@ -21,6 +21,9 @@ func TestDecodeFileConfig(t *testing.T) {
 	}
 	if !cfg.Behaviour.Force || cfg.Behaviour.PreserveLineNumbers || cfg.Behaviour.Verbose != 2 {
 		t.Fatalf("behaviour = %#v, want decoded values", cfg.Behaviour)
+	}
+	if len(cfg.Behaviour.AllowedContexts) != 1 || cfg.Behaviour.AllowedContexts[0] != "@work" || len(cfg.Behaviour.AllowedProjects) != 1 || cfg.Behaviour.AllowedProjects[0] != "+gtdo" {
+		t.Fatalf("allowed sigils = %#v/%#v, want decoded values", cfg.Behaviour.AllowedContexts, cfg.Behaviour.AllowedProjects)
 	}
 	if cfg.Colors.PriZ != "cyan" || cfg.Colors.Map["yellow"] != `\033[1;43m` {
 		t.Fatalf("colors = %#v, want decoded values", cfg.Colors)

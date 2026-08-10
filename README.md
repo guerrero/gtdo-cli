@@ -70,7 +70,9 @@ configuration. A missing file is not an error — every value has a default:
     "verbose": 1,
     "force": false,
     "preserveLineNumbers": true,
-    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]"
+    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]",
+    "allowedContexts": ["@work", "@home"],
+    "allowedProjects": ["+gtdo", "+personal"]
   }
 }
 ```
@@ -80,6 +82,15 @@ Unknown keys and `null` are errors; omitted settings retain their defaults.
 rewrites only the selected file. The `taskFormat` template supports
 `[checked]`, `[priority]`, `[uuid]`, `[content]`, `[keywords]`, `[project]`,
 and `[context]` placeholders.
+
+`allowedContexts` and `allowedProjects` are JSON allow-lists for context and
+project tags. Omit either list to leave its category unrestricted; an explicit
+empty list rejects every tag in that category. Matching is exact and
+case-sensitive. gtdo validates final task text for `add`, `addm`, `addto`,
+`append`, `prepend`, and `replace`; `list` remains usable for legacy tasks
+with tags no longer allowed. A rejected tag reports its category, token, file,
+and 1-based line number as `TODO: Context "@home" is not allowed in
+/path/to/todo.txt at line 3.` (with `Project` for a project tag).
 
 The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`,
 `DONE_FILE`, `REPORT_FILE`, `TODOTXT_*`) keep working for scripting

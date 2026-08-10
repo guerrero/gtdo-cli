@@ -10,9 +10,12 @@ configurable field order. With no file argument it rewrites the configured
 
 The default configuration is:
 
-```toml
-[behavior]
-task_format = "[checked][priority][uuid][content][keywords][project][context]"
+```json
+{
+  "behaviour": {
+    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]"
+  }
+}
 ```
 
 The formatter recognizes the fields `[checked]`, `[priority]`, `[uuid]`,
@@ -67,8 +70,8 @@ fail without rewriting files.
 
 ## Configuration
 
-Add `TaskFormat` to the resolved config and `task_format` to the `[behavior]`
-TOML schema. The built-in default is the canonical format above. This setting
+Add `TaskFormat` to the resolved config and `taskFormat` to the `behaviour`
+JSON schema. The built-in default is the canonical format above. This setting
 is intentionally configuration-only; it has no environment-variable or
 global-flag override.
 
@@ -89,9 +92,8 @@ the UUID matcher and checked-date consumption are formatter-specific.
 - Unit tests cover the default order, custom order, omitted fields, repeated
   fields, UUID and keyword extraction, completion-date removal, malformed
   templates, blank lines, and trailing-newline preservation.
-- Config tests cover the default and TOML-loaded `task_format` value.
+- Config tests cover the default and JSON-loaded `taskFormat` value.
 - CLI session tests cover both-file formatting, single-file formatting,
   explicit-file failures, quiet mode, and success messages.
 - Help text, README/config examples, the changelog, and the generated man page
   document the new action and setting.
-

@@ -72,7 +72,7 @@ func TestManPageHasTheSectionsCobraDoesNotEmit(t *testing.T) {
 
 	for _, section := range []string{
 		".SH NAME", ".SH SYNOPSIS", ".SH DESCRIPTION", ".SH COMMANDS",
-		".SH OPTIONS", ".SH ENVIRONMENT", ".SH FILES", ".SH EXIT STATUS", ".SH SEE ALSO",
+		".SH OPTIONS", ".SH CONFIGURATION", ".SH ENVIRONMENT", ".SH FILES", ".SH EXIT STATUS", ".SH SEE ALSO",
 	} {
 		if !strings.Contains(string(data), section) {
 			t.Errorf("man/gtdo.1 is missing %s", section)
@@ -93,6 +93,22 @@ func TestManPageDocumentsJSONConfig(t *testing.T) {
 	}
 	if strings.Contains(page, "config.toml") {
 		t.Error("man/gtdo.1 still documents config.toml")
+	}
+}
+
+// TestManPageDocumentsSigilAllowLists guards the configuration contract for
+// restricting contexts and projects in task text mutations.
+func TestManPageDocumentsSigilAllowLists(t *testing.T) {
+	data, err := os.ReadFile("gtdo.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	page := string(data)
+	for _, phrase := range []string{".SH CONFIGURATION", "behaviour", "allowedContexts", "allowedProjects", "@work", "+gtdo", "not allowed"} {
+		if !strings.Contains(page, phrase) {
+			t.Errorf("man/gtdo.1 is missing %q", phrase)
+		}
 	}
 }
 
