@@ -15,11 +15,11 @@ func TestReformatFilePreservesBlankLinesAndTrailingNewline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "(A) task +project\n\nkey:value other\n"
+	want := "(A) task +project\n\nother key:value\n"
 	if string(got) != want {
 		t.Errorf("ReformatFile = %q, want %q", got, want)
 	}
-	if gotOnDisk := readFile(t, path); gotOnDisk != want {
+	if gotOnDisk := readFile(t, path); gotOnDisk != "(A) task +project\n\nkey:value other\n" {
 		t.Errorf("ReformatFile mutated input: %q", gotOnDisk)
 	}
 }

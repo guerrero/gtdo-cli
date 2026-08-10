@@ -124,14 +124,7 @@ func ReformatFile(path string, f TaskFormat) ([]byte, error) {
 	}
 	formatted := make([]string, len(lines))
 	for i, line := range lines {
-		formatted[i] = line
-		words := strings.Fields(line)
-		for _, word := range words {
-			if word == "x" || taskFormatPriorityWordRe.MatchString(word) || taskFormatUUIDWordRe.MatchString(word) || projectWordRe.MatchString(word) || contextWordRe.MatchString(word) {
-				formatted[i] = f.FormatLine(line)
-				break
-			}
-		}
+		formatted[i] = f.FormatLine(line)
 	}
 	return linesData(formatted, finalNL), nil
 }
