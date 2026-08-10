@@ -5,13 +5,17 @@ package cli
 // "PREFIX: N added." — with the prefix from the destination file's name.
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
+	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
 
 	"github.com/guerrero/gtdo/internal/config"
+	"github.com/guerrero/gtdo/internal/exitcode"
 	"github.com/guerrero/gtdo/internal/todo"
 )
 
@@ -19,19 +23,66 @@ import (
 // "Add: " (unless -f), reading a line of stdin like todo.sh's
 // `read -p "Add: " -e -r input`.
 func actionAdd(cmd *cobra.Command, args []string, cfg *config.Config) error {
+	opts, err := parseAddOptions(args)
+	if err != nil || (cfg.Force && opts.Mode != addModeNone) {
+		fmt.Fprintln(cmd.ErrOrStderr(), addUsage())
+		return exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
+	}
+
 	s, err := newSession(cmd, cfg)
 	if err != nil {
 		return err
 	}
-	input, err := s.addInput(args, `usage: `+ProgName+` add "TODO ITEM"`)
-	if err != nil {
-		return err
+	if opts.Mode == addModeNone {
+		return addLegacy(s, opts.Positional)
 	}
-	line, text, err := s.store.Add(input, cfg.DateOnAdd, cfg.PriorityOnAdd, now())
+
+	candidates := collectAddCandidates(cfg)
+	input := newAddInput(s, candidates)
+	var text string
+	if opts.Mode == addModeInteractive {
+		text, err = input.PromptTask(candidates)
+	} else {
+		text, err = runGuided(input, candidates, opts)
+	}
+	if err != nil {
+		return cancelOrDie(s, err)
+	}
+	line, text, err := s.store.Add(text, cfg.DateOnAdd, cfg.PriorityOnAdd, now())
 	if err != nil {
 		return s.die(err.Error())
 	}
 	return s.printAdded(s.store.TodoFile, line, text)
+}
+
+// addLegacy keeps the original add path intact for positional invocations.
+// Its prompt, usage, Store.Add call, and confirmation output are deliberately
+// unchanged so introducing explicit modes cannot alter the byte contract.
+func addLegacy(s *session, args []string) error {
+	input, err := s.addInput(args, `usage: `+ProgName+` add "TODO ITEM"`)
+	if err != nil {
+		return err
+	}
+	line, text, err := s.store.Add(input, s.cfg.DateOnAdd, s.cfg.PriorityOnAdd, now())
+	if err != nil {
+		return s.die(err.Error())
+	}
+	return s.printAdded(s.store.TodoFile, line, text)
+}
+
+// cancelOrDie maps explicit-mode cancellation to a silent generic failure.
+// Readline returns ErrInterrupt from Instance.Readline while lower-level
+// terminal tests and adapters may expose InterruptError directly; both forms
+// represent the same no-write cancellation contract.
+func cancelOrDie(s *session, err error) error {
+	if err == nil {
+		return nil
+	}
+	var interrupt *readline.InterruptError
+	if errors.Is(err, io.EOF) || errors.Is(err, readline.ErrInterrupt) || errors.As(err, &interrupt) {
+		return exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
+	}
+	return s.die(err.Error())
 }
 
 // actionAddm adds each non-empty line of the input as its own task,
