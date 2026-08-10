@@ -43,7 +43,7 @@ go install github.com/guerrero/gtdo/cmd/gtdo@latest
 ## Usage
 
 ```
-gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 ```
 
 Flags go before the action, getopts-style, exactly like todo.sh. `gtdo -h`
@@ -63,9 +63,11 @@ verbose = 1             # TODOTXT_VERBOSE
 force = false           # TODOTXT_FORCE
 ```
 
-The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`,
-`DONE_FILE`, `REPORT_FILE`, `TODOTXT_*`) keep working for scripting
-compatibility.
+The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`, `DONE_FILE`,
+`REPORT_FILE`, `TODOTXT_FORCE`, `TODOTXT_PRESERVE_LINE_NUMBERS`,
+`TODOTXT_AUTO_ARCHIVE`, `TODOTXT_PRIORITY_ON_ADD`, `TODOTXT_VERBOSE`,
+`TODOTXT_DEFAULT_ACTION`, `TODOTXT_SOURCEVAR`, `TODOTXT_PLAIN`, and
+`SENTENCE_DELIMITERS`) keep working for scripting compatibility.
 
 Timestamp IDs are opt in. Add this to the behavior section to assign an ID to
 each newly created task:
