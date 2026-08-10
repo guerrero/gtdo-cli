@@ -113,6 +113,10 @@ func readLines(path string) (lines []string, finalNL bool, err error) {
 // writeLines writes the lines joined by newlines, terminating the last one
 // iff finalNL — the exact file shape sed leaves behind.
 func writeLines(path string, lines []string, finalNL bool) error {
+	return os.WriteFile(path, linesData(lines, finalNL), 0o644)
+}
+
+func linesData(lines []string, finalNL bool) []byte {
 	var b strings.Builder
 	for i, line := range lines {
 		if i > 0 {
@@ -126,7 +130,7 @@ func writeLines(path string, lines []string, finalNL bool) error {
 	if finalNL && len(lines) > 0 {
 		b.WriteByte('\n')
 	}
-	return os.WriteFile(path, []byte(b.String()), 0o644)
+	return []byte(b.String())
 }
 
 // appendTo appends add to path with the semantics of `>>`: when the file

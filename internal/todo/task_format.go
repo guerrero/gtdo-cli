@@ -116,6 +116,26 @@ func (f TaskFormat) FormatLine(line string) string {
 	return strings.Join(parts, " ")
 }
 
+// ReformatFile formats each line while preserving blank lines and final EOL.
+func ReformatFile(path string, f TaskFormat) ([]byte, error) {
+	lines, finalNL, err := readLines(path)
+	if err != nil {
+		return nil, err
+	}
+	formatted := make([]string, len(lines))
+	for i, line := range lines {
+		formatted[i] = line
+		words := strings.Fields(line)
+		for _, word := range words {
+			if word == "x" || taskFormatPriorityWordRe.MatchString(word) || taskFormatUUIDWordRe.MatchString(word) || projectWordRe.MatchString(word) || contextWordRe.MatchString(word) {
+				formatted[i] = f.FormatLine(line)
+				break
+			}
+		}
+	}
+	return linesData(formatted, finalNL), nil
+}
+
 var (
 	completionDateWordRe     = regexp.MustCompile(`^(19|20)[0-9]{2}-[0-9]{2}-[0-9]{2}$`)
 	taskFormatPriorityWordRe = regexp.MustCompile(`^\([A-Z]\)$`)

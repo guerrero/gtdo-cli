@@ -1,9 +1,48 @@
 package todo
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestReformatFilePreservesBlankLinesAndTrailingNewline(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "todo.txt")
+	writeFile(t, path, "(A) task +project\n\nkey:value other\n")
+	f := mustTaskFormat(t, defaultTaskFormat)
+
+	got, err := ReformatFile(path, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "(A) task +project\n\nkey:value other\n"
+	if string(got) != want {
+		t.Errorf("ReformatFile = %q, want %q", got, want)
+	}
+	if gotOnDisk := readFile(t, path); gotOnDisk != want {
+		t.Errorf("ReformatFile mutated input: %q", gotOnDisk)
+	}
+}
+
+func TestReformatFilePreservesMissingTrailingNewline(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "todo.txt")
+	writeFile(t, path, "@desk task +work")
+	f := mustTaskFormat(t, defaultTaskFormat)
+	got, err := ReformatFile(path, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "task +work @desk" {
+		t.Errorf("ReformatFile = %q, want %q", got, "task +work @desk")
+	}
+}
+
+func TestReformatFileReturnsReadErrors(t *testing.T) {
+	f := mustTaskFormat(t, defaultTaskFormat)
+	if _, err := ReformatFile(filepath.Join(t.TempDir(), "missing.txt"), f); err == nil {
+		t.Fatal("ReformatFile missing file returned nil error")
+	}
+}
 
 const defaultTaskFormat = "[checked][priority][uuid][content][keywords][project][context]"
 
