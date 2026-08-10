@@ -63,7 +63,9 @@ func TestTaskDate(t *testing.T) {
 	}{
 		{"2011-03-02 task", "2011-03-02"},
 		{"(A) 2009-02-13 new task", "2009-02-13"}, // creation date after priority (t1400)
-		{"x 2011-03-02 task", "2011-03-02"},       // completion date after "x " (t1310)
+		{"20090213T044000.12Z 2026-08-08 task", "2026-08-08"},
+		{"x (A) 20090213T044000.12Z 2026-08-08 task", "2026-08-08"},
+		{"x 2011-03-02 task", "2011-03-02"}, // completion date after "x " (t1310)
 		{"x (A) 2011-03-02 task", "2011-03-02"},
 		{"1999-01-31 task", "1999-01-31"},
 		{"2099-12-31 task", "2099-12-31"},
@@ -81,6 +83,25 @@ func TestTaskDate(t *testing.T) {
 	for _, c := range cases {
 		if got := (Task{Text: c.text}).Date(); got != c.want {
 			t.Errorf("Date(%q) = %q, want %q", c.text, got, c.want)
+		}
+	}
+}
+
+func TestTaskUUID(t *testing.T) {
+	cases := []struct {
+		text string
+		want string
+	}{
+		{"20090213T044000.12Z task", "20090213T044000.12Z"},
+		{"(A) 20090213T044000.12Z task", "20090213T044000.12Z"},
+		{"x (A) 20090213T044000.12Z 2026-08-08 task", "20090213T044000.12Z"},
+		{"20090213T044000.1Z task", ""},
+		{"task 20090213T044000.12Z", ""},
+		{"2026-08-08 20090213T044000.12Z task", ""},
+	}
+	for _, c := range cases {
+		if got := (Task{Text: c.text}).UUID(); got != c.want {
+			t.Errorf("UUID(%q) = %q, want %q", c.text, got, c.want)
 		}
 	}
 }
