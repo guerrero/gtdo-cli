@@ -1,5 +1,6 @@
 package config
 
+// DefaultTaskFormat is the built-in ordering for rendered task fields.
 const DefaultTaskFormat = "[checked][priority][uuid][content][keywords][project][context]"
 
 // defaultFileConfig returns the §5.2 schema pre-filled with todo.sh's
