@@ -62,6 +62,9 @@ func TestTaskDate(t *testing.T) {
 		want string
 	}{
 		{"2011-03-02 task", "2011-03-02"},
+		{"2011-03-02foo", "2011-03-02"}, // dateRe historically does not require a boundary
+		{"2011-03-02\tfoo", "2011-03-02"},
+		{"2011-03-02\rfoo", "2011-03-02"},
 		{"(A) 2009-02-13 new task", "2009-02-13"}, // creation date after priority (t1400)
 		{"20090213T044000.12Z 2026-08-08 task", "2026-08-08"},
 		{"x (A) 20090213T044000.12Z 2026-08-08 task", "2026-08-08"},

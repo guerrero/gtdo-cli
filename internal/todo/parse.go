@@ -57,7 +57,14 @@ func (t Task) Priority() (byte, bool) {
 // after the "x " marker. Canonical IDs are skipped rather than returned as
 // dates.
 func (t Task) Date() string {
-	return parseTaskPrefix(t.Text).date
+	p := parseTaskPrefix(t.Text)
+	if p.date != "" {
+		return p.date
+	}
+	// Keep the historical unbounded dateRe behavior for legacy lines whose
+	// date is followed by a non-space delimiter. The shared prefix parser is
+	// intentionally stricter so render can preserve metadata boundaries.
+	return dateRe.FindString(p.rest)
 }
 
 // Contexts returns the @-sigil words found in the text, sigil included, in
