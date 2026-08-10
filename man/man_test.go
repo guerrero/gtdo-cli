@@ -89,7 +89,7 @@ func TestManPageDocumentsSigilAllowLists(t *testing.T) {
 	}
 
 	page := string(data)
-	for _, phrase := range []string{".SH CONFIGURATION", "allowed_contexts", "allowed_projects", "@work", "+gtdo", "not allowed"} {
+	for _, phrase := range []string{".SH CONFIGURATION", "[behavior]", "allowed_contexts", "allowed_projects", "@work", "+gtdo", "not allowed"} {
 		if !strings.Contains(page, phrase) {
 			t.Errorf("man/gtdo.1 is missing %q", phrase)
 		}
