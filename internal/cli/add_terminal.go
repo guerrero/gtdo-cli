@@ -192,7 +192,9 @@ type ttyInputState struct {
 	promptSource *os.File
 	promptInput  *readline.CancelableStdin
 	promptRaw    *readline.State
+	selectorKeys chan rune
 	selectorStop chan struct{}
+	selectorPrev *readline.Config
 	selectorPend *rune
 	close        sync.Once
 }
@@ -312,8 +314,12 @@ func (t *ttyAddInput) Close() error {
 			}
 		}
 		if t.state.selectorStop != nil {
+			if t.state.prompt != nil && t.state.selectorPrev != nil {
+				t.state.prompt.SetConfig(t.state.selectorPrev)
+			}
 			close(t.state.selectorStop)
 			t.state.selectorStop = nil
+			t.state.selectorKeys = nil
 		}
 		if t.state.promptSource != nil {
 			if t.state.promptInput != nil {
@@ -388,47 +394,41 @@ func (t *ttyAddInput) Select(_ guidedPhase, options []string) ([]string, error) 
 	if state.prompt == nil {
 		return nil, io.EOF
 	}
-	keys := make(chan rune, 32)
-	stop := make(chan struct{})
-	state.selectorStop = stop
-	previous := state.prompt.Config.Clone()
-	selectorConfig := state.prompt.Config.Clone()
-	selectorConfig.Prompt = ""
-	selectorConfig.AutoComplete = nil
-	selectorConfig.VimMode = true
-	selectorConfig.FuncFilterInputRune = func(key rune) (rune, bool) {
-		select {
-		case keys <- key:
-			// Let readline's operation observe EOF itself; filtering rune(0)
-			// would otherwise make its goroutine spin on a closed terminal.
-			return 0, key == 0
-		case <-stop:
-			return 0, false
+	if state.selectorKeys == nil {
+		state.selectorKeys = make(chan rune, 64)
+		state.selectorStop = make(chan struct{})
+		state.selectorPrev = state.prompt.Config.Clone()
+		selectorConfig := state.prompt.Config.Clone()
+		selectorConfig.Prompt = ""
+		selectorConfig.AutoComplete = nil
+		selectorConfig.VimMode = true
+		keys := state.selectorKeys
+		stop := state.selectorStop
+		selectorConfig.FuncFilterInputRune = func(key rune) (rune, bool) {
+			select {
+			case keys <- key:
+				// Let readline's operation observe EOF itself; filtering rune(0)
+				// would otherwise make its goroutine spin on a closed terminal.
+				return 0, key == 0
+			case <-stop:
+				return 0, false
+			}
 		}
+		state.prompt.SetConfig(selectorConfig)
 	}
-	state.prompt.SetConfig(selectorConfig)
 	terminal := state.prompt.Terminal
 	if err := terminal.EnterRawMode(); err != nil {
-		state.prompt.SetConfig(previous)
-		close(stop)
-		state.selectorStop = nil
 		return nil, err
 	}
 	defer func() {
 		_ = terminal.ExitRawMode()
-		close(stop)
-		state.selectorStop = nil
-		previous.VimMode = false
-		previous.FuncFilterInputRune = nil
-		state.prompt.SetConfig(previous)
-		terminal.KickRead()
 	}()
 
 	selector := newSelectorState(options)
 	fmt.Fprintln(t.session.errw, selectorHelp)
 	renderSelector(t.session.errw, &selector)
 	terminal.KickRead()
-	reader := selectorChannelReader{keys: keys, stop: stop}
+	reader := selectorChannelReader{keys: state.selectorKeys, stop: state.selectorStop}
 	for {
 		key := readSelectorKey(reader, &state.selectorPend)
 		if key == 0 {
@@ -462,6 +462,19 @@ func (r selectorChannelReader) ReadRune() rune {
 		return key
 	case <-r.stop:
 		return 0
+	}
+}
+
+func (r selectorChannelReader) ReadRuneTimeout(timeout time.Duration) (rune, bool) {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case key := <-r.keys:
+		return key, key != 0
+	case <-r.stop:
+		return 0, false
+	case <-timer.C:
+		return 0, false
 	}
 }
 
@@ -640,6 +653,10 @@ type selectorRuneReader interface {
 	ReadRune() rune
 }
 
+type selectorTimedRuneReader interface {
+	ReadRuneTimeout(time.Duration) (rune, bool)
+}
+
 const selectorEscapeWait = 20 * time.Millisecond
 
 func readSelectorKey(terminal selectorRuneReader, pending **rune) rune {
@@ -677,12 +694,9 @@ func readSelectorKey(terminal selectorRuneReader, pending **rune) rune {
 }
 
 func readSelectorRune(reader selectorRuneReader, timeout time.Duration) (rune, bool) {
-	result := make(chan rune, 1)
-	go func() { result <- reader.ReadRune() }()
-	select {
-	case key := <-result:
-		return key, key != 0
-	case <-time.After(timeout):
-		return 0, false
+	if timed, ok := reader.(selectorTimedRuneReader); ok {
+		return timed.ReadRuneTimeout(timeout)
 	}
+	key := reader.ReadRune()
+	return key, key != 0
 }

@@ -187,6 +187,36 @@ func TestReadSelectorKeyDoesNotWaitForLoneEsc(t *testing.T) {
 	}
 }
 
+func TestReadSelectorKeyKeepsDelayedRune(t *testing.T) {
+	keys := make(chan rune, 2)
+	stop := make(chan struct{})
+	reader := selectorChannelReader{keys: keys, stop: stop}
+	keys <- readline.CharEsc
+	if got := readSelectorKey(reader, nil); got != readline.CharEsc {
+		t.Fatalf("first key = %d, want Esc", got)
+	}
+	time.Sleep(30 * time.Millisecond)
+	keys <- readline.CharEnter
+	if got := readSelectorKey(reader, nil); got != readline.CharEnter {
+		t.Fatalf("delayed key = %d, want Enter", got)
+	}
+	close(stop)
+}
+
+func TestSelectorReaderPreservesQueuedPhaseKeys(t *testing.T) {
+	keys := make(chan rune, 2)
+	stop := make(chan struct{})
+	reader := selectorChannelReader{keys: keys, stop: stop}
+	keys <- readline.CharEnter
+	keys <- readline.CharEnter
+	for i := 0; i < 2; i++ {
+		if got := readSelectorKey(reader, nil); got != readline.CharEnter {
+			t.Fatalf("phase key %d = %d, want Enter", i, got)
+		}
+	}
+	close(stop)
+}
+
 func TestRenderSelectorClearsPreviousFrame(t *testing.T) {
 	state := newSelectorState([]string{"@home", "@office"})
 	var rendered bytes.Buffer
