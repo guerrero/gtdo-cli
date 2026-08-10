@@ -201,22 +201,35 @@ func (s *Store) replaceOrPrepend(item int, text string, isReplace bool) (string,
 	}
 	prefix := parseMutationPrefix(task.Text)
 	inputPrefix := parseMutationPrefix(text)
+	// Before UUID metadata existed, replace/prepend did not recognize a
+	// leading done marker. Keep that byte behavior for legacy lines while
+	// retaining the canonical done+UUID prefix for migrated tasks.
+	if prefix.done && prefix.uuid == "" {
+		prefix = taskPrefix{rest: task.Text}
+	}
 	priority, prepdate := prefix.priority, prefix.date
 	input := cleanInput(text)
 	if isReplace {
-		if inputPrefix.date != "" {
-			prepdate = inputPrefix.date
-		}
-		if inputPrefix.priority != "" {
-			priority = inputPrefix.priority
-		}
-		// Replacement metadata is stripped from the new body. An existing
-		// identifier always wins; when the old task has no identifier, keep
-		// caller-provided ID text as ordinary replacement content rather than
-		// backfilling metadata onto the old line.
-		input = inputPrefix.rest
-		if prefix.uuid == "" && inputPrefix.uuid != "" {
-			input = inputPrefix.uuid + " " + input
+		// A done marker at the start of replacement input was body text to
+		// todo.sh, so leave it untouched. Likewise, when an old task has no
+		// UUID, a caller's canonical-looking ID remains literal replacement
+		// text; mutations never generate or promote metadata on that line.
+		if inputPrefix.done || (prefix.uuid == "" && inputPrefix.uuid != "") {
+			if inputPrefix.priority != "" && !inputPrefix.done {
+				priority = inputPrefix.priority
+				input = strings.TrimPrefix(input, inputPrefix.priority)
+			}
+		} else {
+			if inputPrefix.date != "" {
+				prepdate = inputPrefix.date
+			}
+			if inputPrefix.priority != "" {
+				priority = inputPrefix.priority
+			}
+			// Replacement metadata is stripped from the new body. An existing
+			// identifier always wins, and the stripped body is cleaned after
+			// parsing so CR/LF never creates an embedded task line.
+			input = cleanInput(inputPrefix.rest)
 		}
 	}
 	prefix.priority = priority
@@ -604,6 +617,12 @@ func parseMutationPrefix(text string) taskPrefix {
 			p.date = m[1]
 			p.rest = p.rest[len(m[0]):]
 		}
+	}
+	// A completed line without a canonical UUID is legacy todo.sh text:
+	// priority/date expressions apply only at byte zero, so the `x ` marker
+	// and everything after it must remain body text for mutation parity.
+	if p.done && p.uuid == "" {
+		return taskPrefix{rest: text}
 	}
 	return p
 }

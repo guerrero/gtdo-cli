@@ -558,6 +558,100 @@ func TestReplaceInputPriorityAndDateReplace(t *testing.T) {
 	}
 }
 
+func TestReplacePrefixedMultilineCleansInput(t *testing.T) {
+	const id = "20090213T044000.12Z"
+	s := newTestStore(t, "(A) "+id+" 2009-02-13 old task\n")
+	input := "(B) 20990101T010101.00Z 2010-07-04 line one\r\nline two"
+	_, got, err := s.Replace(1, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "(B) " + id + " 2010-07-04 line one  line two"
+	if got != want {
+		t.Errorf("Replace = %q, want %q", got, want)
+	}
+	if file := readFile(t, s.TodoFile); file != want+"\n" {
+		t.Errorf("todo.txt = %q, want %q", file, want+"\n")
+	}
+}
+
+func TestReplaceLegacyTaskKeepsCallerUUIDText(t *testing.T) {
+	s := newTestStore(t, "old task\n")
+	s.EnableUUID = true
+	input := "20990101T010101.00Z replacement\r\ncontinued"
+	_, got, err := s.Replace(1, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "20990101T010101.00Z replacement  continued"
+	if got != want {
+		t.Errorf("Replace = %q, want %q", got, want)
+	}
+	if file := readFile(t, s.TodoFile); file != want+"\n" {
+		t.Errorf("todo.txt = %q, want %q", file, want+"\n")
+	}
+}
+
+func TestReplacePrependDoneWithoutUUIDKeepLegacyShape(t *testing.T) {
+	s := newTestStore(t, "x (A) 2009-02-13 done task\n")
+	got, err := s.Prepend(1, "remember")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "remember x (A) 2009-02-13 done task"; got != want {
+		t.Errorf("Prepend = %q, want %q", got, want)
+	}
+
+	s = newTestStore(t, "x (A) 2009-02-13 done task\n")
+	_, got, err = s.Replace(1, "(B) new")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "(B) new"; got != want {
+		t.Errorf("Replace = %q, want %q", got, want)
+	}
+}
+
+func TestReplacePrependDoneUUIDKeepCanonicalPrefix(t *testing.T) {
+	const id = "20090213T044000.12Z"
+	s := newTestStore(t, "x (A) "+id+" 2009-02-13 done task\n")
+	got, err := s.Prepend(1, "remember")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "x (A) " + id + " 2009-02-13 remember done task"; got != want {
+		t.Errorf("Prepend = %q, want %q", got, want)
+	}
+
+	_, got, err = s.Replace(1, "(B) new")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "x (B) " + id + " 2009-02-13 new"; got != want {
+		t.Errorf("Replace = %q, want %q", got, want)
+	}
+}
+
+func TestPriorityMutationsKeepLegacyDoneShape(t *testing.T) {
+	s := newTestStore(t, "x (A) 2009-02-13 done task\n")
+	gotPri, err := s.Pri(1, 'B')
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "(B) x (A) 2009-02-13 done task"; gotPri.NewText != want {
+		t.Errorf("Pri = %q, want %q", gotPri.NewText, want)
+	}
+
+	s = newTestStore(t, "x (A) 2009-02-13 done task\n")
+	gotDepri, err := s.Depri([]int{1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotDepri[0].Prioritized || gotDepri[0].NewText != "x (A) 2009-02-13 done task" {
+		t.Errorf("Depri = %+v", gotDepri[0])
+	}
+}
+
 func TestReplaceLiteralSpecials(t *testing.T) {
 	s := newTestStore(t, "jump on hay\n")
 	_, newText, err := s.Replace(1, "thrash the hay & thrash the wheat")
