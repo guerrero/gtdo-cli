@@ -106,9 +106,9 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
-func TestTaskFormatFromTOML(t *testing.T) {
+func TestTaskFormatFromJSON(t *testing.T) {
 	h := home(t)
-	body := "[behavior]\ntask_format = \"[project][content][keywords][context]\"\n"
+	body := `{"behaviour":{"taskFormat":"[project][content][keywords][context]"}}`
 	cfg := loadWith(t, withOpts(t, Options{}, body), h)
 	want := "[project][content][keywords][context]"
 	if cfg.TaskFormat != want {

@@ -23,6 +23,7 @@ type behaviourJSON struct {
 	DefaultAction       string `json:"defaultAction"`
 	SourceVar           string `json:"sourceVar"`
 	SentenceDelimiters  string `json:"sentenceDelimiters"`
+	TaskFormat          string `json:"taskFormat"`
 }
 
 type colorsJSON struct {
@@ -107,7 +108,7 @@ func validateFileConfigKeys(raw any) error {
 		if err := validateJSONObjectKeys(behaviour, map[string]struct{}{
 			"force": {}, "preserveLineNumbers": {}, "autoArchive": {}, "dateOnAdd": {},
 			"priorityOnAdd": {}, "verbose": {}, "defaultAction": {}, "sourceVar": {},
-			"sentenceDelimiters": {},
+			"sentenceDelimiters": {}, "taskFormat": {},
 		}); err != nil {
 			return err
 		}
