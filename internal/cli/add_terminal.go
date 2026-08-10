@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/chzyer/readline"
@@ -290,14 +289,6 @@ func (t *ttyAddInput) newConfig(source io.ReadCloser, fd int, raw func() *readli
 type ttyPainter struct{}
 
 func (ttyPainter) Paint(line []rune, _ int) []rune { return line }
-
-func duplicateTTY(file *os.File) (*os.File, error) {
-	fd, err := syscall.Dup(int(file.Fd()))
-	if err != nil {
-		return nil, err
-	}
-	return os.NewFile(uintptr(fd), file.Name()), nil
-}
 
 // Close restores raw mode and stops readline's input goroutine. A
 // CancelableStdin is closed before its duplicated descriptor so a blocked PTY
