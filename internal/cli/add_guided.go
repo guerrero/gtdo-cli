@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/guerrero/gtdo/internal/todo"
@@ -65,7 +66,7 @@ func composeGuidedTask(base string, metadata, projects, contexts []string) strin
 	for _, project := range (todo.Task{Text: base}).Projects() {
 		projectSet[project] = struct{}{}
 	}
-	for _, project := range projects {
+	for _, project := range sortedGuidedTokens(projects) {
 		if project == "" {
 			continue
 		}
@@ -80,7 +81,7 @@ func composeGuidedTask(base string, metadata, projects, contexts []string) strin
 	for _, context := range (todo.Task{Text: base}).Contexts() {
 		contextSet[context] = struct{}{}
 	}
-	for _, context := range contexts {
+	for _, context := range sortedGuidedTokens(contexts) {
 		if context == "" {
 			continue
 		}
@@ -119,7 +120,11 @@ type lineAddInput struct {
 var _ addInput = lineAddInput{}
 
 func (l lineAddInput) PromptTask(addCandidates) (string, error) {
-	return l.readLine()
+	line, err := l.readLineErr()
+	if err != nil {
+		return "", err
+	}
+	return line, nil
 }
 
 func (l lineAddInput) PromptMetadata(addCandidates) ([]string, error) {
@@ -145,11 +150,7 @@ func (l lineAddInput) PromptMetadata(addCandidates) ([]string, error) {
 func (l lineAddInput) Select(_ guidedPhase, options []string) ([]string, error) {
 	line, err := l.readLineErr()
 	if err != nil {
-		if line == "" {
-			return nil, err
-		}
-		// A final unterminated non-empty line is still a complete selection
-		// line, matching the legacy readLine behavior.
+		return nil, err
 	}
 	if line == "" {
 		return nil, nil
@@ -171,7 +172,17 @@ func (l lineAddInput) Select(_ guidedPhase, options []string) ([]string, error) 
 		seen[token] = struct{}{}
 		selected = append(selected, token)
 	}
+	sort.Strings(selected)
 	return selected, nil
+}
+
+func sortedGuidedTokens(tokens []string) []string {
+	if len(tokens) == 0 {
+		return nil
+	}
+	sorted := append([]string(nil), tokens...)
+	sort.Strings(sorted)
+	return sorted
 }
 
 func (l lineAddInput) readLine() (string, error) {

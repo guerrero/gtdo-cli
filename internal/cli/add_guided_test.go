@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bufio"
+	"errors"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -116,6 +118,13 @@ func TestComposeGuidedTaskSkipsDuplicateSigilsAndEmptyGroups(t *testing.T) {
 			contexts: []string{},
 			want:     "Call team",
 		},
+		{
+			name:     "sigils sorted before composition",
+			base:     "Call team",
+			projects: []string{"+z", "+a"},
+			contexts: []string{"@z", "@a"},
+			want:     "Call team +a +z @a @z",
+		},
 	}
 
 	for _, tc := range tests {
@@ -183,6 +192,40 @@ func TestLineAddInputTreatsEmptyLinesAsEmptySelections(t *testing.T) {
 		if len(selected) != 0 {
 			t.Fatalf("%s selection = %v, want empty", phase, selected)
 		}
+	}
+}
+
+func TestLineAddInputPropagatesTaskEOF(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team"))}
+	got, err := input.PromptTask(addCandidates{})
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("PromptTask() error = %v, want io.EOF", err)
+	}
+	if got != "" {
+		t.Fatalf("PromptTask() text = %q, want empty on EOF", got)
+	}
+}
+
+func TestLineAddInputPropagatesSelectionEOF(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("+gtdo"))}
+	got, err := input.Select(phaseProject, []string{"+gtdo"})
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("Select() error = %v, want io.EOF", err)
+	}
+	if got != nil {
+		t.Fatalf("Select() values = %v, want nil on EOF", got)
+	}
+}
+
+func TestLineAddInputSortsFilteredSelections(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("+z +missing +a +z\n"))}
+	got, err := input.Select(phaseProject, []string{"+z", "+a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"+a", "+z"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Select() values = %v, want %v", got, want)
 	}
 }
 
