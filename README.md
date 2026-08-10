@@ -65,12 +65,23 @@ dir = "~/todo"          # TODO_DIR
 verbose = 1             # TODOTXT_VERBOSE
 force = false           # TODOTXT_FORCE
 task_format = "[checked][priority][uuid][content][keywords][project][context]"
+allowed_contexts = ["@work", "@home"]
+allowed_projects = ["+gtdo", "+personal"]
 ```
 
 `gtdo format` rewrites both configured task files, while `gtdo format FILE`
 rewrites only the selected file. The `task_format` template supports
 `[checked]`, `[priority]`, `[uuid]`, `[content]`, `[keywords]`, `[project]`,
 and `[context]` placeholders.
+
+`allowed_contexts` and `allowed_projects` are TOML-only allow-lists for
+context and project tags. Omit either list to leave its category unrestricted;
+an explicit empty list rejects every tag in that category. Matching is exact
+and case-sensitive. gtdo validates final task text for `add`, `addm`, `addto`,
+`append`, `prepend`, and `replace`; `list` remains usable for legacy tasks
+with tags no longer allowed. A rejected tag reports its category, token, file,
+and 1-based line number as `TODO: Context "@home" is not allowed in
+/path/to/todo.txt at line 3.` (with `Project` for a project tag).
 
 The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`,
 `DONE_FILE`, `REPORT_FILE`, `TODOTXT_*`) keep working for scripting
