@@ -17,7 +17,7 @@ The central acceptance criterion: **for a given input, the output (stdout, stder
 
 - **20 actions** with their aliases: `add` (a), `addm`, `addto`, `append` (app), `archive`, `del` (rm), `depri` (dp), `do` (done), `help`, `shorthelp`, `list` (ls), `listall` (lsa), `listcon` (lsc), `listpri` (lsp), `listproj` (lsprj), `move` (mv), `prepend` (prep), `pri` (p), `replace`, `report`.
 - Global flags: `-@ -+ -a -A -c -d -f -h -n -N -p -P -t -T -v -V -x` (semantics identical to todo.sh, §6.1).
-- Own TOML configuration + environment variables (§5).
+- Own JSON configuration + environment variables (§5).
 - Color configuration (§5.3).
 - Bash and fish completion (§6.6).
 - Migrated tests (§7), man page, Makefile, goreleaser (§8).
@@ -35,9 +35,9 @@ The central acceptance criterion: **for a given input, the output (stdout, stder
 | Topic | Decision |
 |---|---|
 | Binary name | `gtdo` |
-| Config format | Own TOML (BurntSushi/toml, like gitia) — bash is not parsed |
-| Config location | `-d PATH` / `$GTDO_CONFIG` > `~/.config/gtdo/config.toml` > `/etc/gtdo/config.toml` |
-| Precedence | CLI flags > env vars > TOML > defaults |
+| Config format | JSON with Go's standard `encoding/json` package — bash is not parsed |
+| Config location | `-d PATH` / `$GTDO_CONFIG` > `~/.config/gtdo/config.json` > `/etc/gtdo/config.json` |
+| Precedence | CLI flags > env vars > JSON > defaults |
 | Env vars | `TODO_DIR`, `TODO_FILE`, `DONE_FILE`, `REPORT_FILE`, `TODOTXT_*` keep working (scripting compatibility) |
 | Colors | Always emitted except in plain mode (`-p` or config), same as todo.sh (no TTY detection) |
 | Interactive prompts | Identical: `Add:`, `Append:`, `Delete '...'? (y/n)`; `-f` skips them |
@@ -51,7 +51,7 @@ gtdo-cli/
 ├── internal/cli/             — cobra tree: root + actions, version, completions
 │   └── testdata/script/*.txtar — black-box session tests
 ├── internal/todo/            — domain: Task, parsing, filters, sort, mutations, _format pipeline
-├── internal/config/          — TOML + env vars + precedence
+├── internal/config/          — JSON (`json.go`, `loader.go`) + env vars + precedence
 ├── internal/ui/              — ANSI colors, output formatting
 ├── internal/exitcode/        — exit codes
 ├── tools/genman/             — man page generation
@@ -62,62 +62,68 @@ gtdo-cli/
 └── ACTIONS.md                — checklist (already exists)
 ```
 
-Dependencies: `github.com/spf13/cobra`, `github.com/spf13/pflag`, `github.com/BurntSushi/toml`, `github.com/rogpeppe/go-internal` (tests), `golang.org/x/sys` (TTY if needed).
+Dependencies: `github.com/spf13/cobra`, `github.com/spf13/pflag`, `github.com/rogpeppe/go-internal` (tests), `golang.org/x/sys` (TTY if needed); configuration uses the standard `encoding/json` package.
 
 ## 5. Configuration
 
 ### 5.1 Resolution
 
-TOML file search order: `-d PATH` if passed, else `$GTDO_CONFIG`, else `~/.config/gtdo/config.toml`, else `/etc/gtdo/config.toml`. If none exists → defaults. Unlike todo.sh there is no fatal error if the file is missing (there is no mandatory config file).
+Config search order: `-d PATH` / `$GTDO_CONFIG` > `~/.config/gtdo/config.json` > `/etc/gtdo/config.json`.
 
-### 5.2 TOML schema
+`internal/config/loader.go` selects the first existing file; if none exists, gtdo uses defaults. Unlike todo.sh there is no fatal error if the file is missing (there is no mandatory config file).
 
-```toml
-[paths]
-dir = "~/todo"              # TODO_DIR
-todo_file = "~/todo/todo.txt"
-done_file = "~/todo/done.txt"
-report_file = "~/todo/report.txt"
+### 5.2 JSON schema
 
-[behavior]
-force = false               # TODOTXT_FORCE
-preserve_line_numbers = true  # TODOTXT_PRESERVE_LINE_NUMBERS
-auto_archive = true         # TODOTXT_AUTO_ARCHIVE
-date_on_add = false         # TODOTXT_DATE_ON_ADD
-priority_on_add = ""        # TODOTXT_PRIORITY_ON_ADD (letter A-Z)
-verbose = 1                 # TODOTXT_VERBOSE
-default_action = ""         # TODOTXT_DEFAULT_ACTION
-sourcevar = ""              # TODOTXT_SOURCEVAR (source file for listcon/listproj)
-sentence_delimiters = ",.:;"  # SENTENCE_DELIMITERS
-
-[colors]
-pri_a = "\\033[1;33m"       # YELLOW
-pri_b = "\\033[0;32m"       # GREEN
-pri_c = "\\033[1;34m"       # LIGHT_BLUE
-pri_x = "\\033[1;37m"       # WHITE
-color_done = "\\033[0;37m"  # LIGHT_GREY
-color_project = ""
-color_context = ""
-color_date = ""
-color_number = ""
-color_meta = ""
-
-[colors.map]                # map of 16 ANSI colors (NONE, BLACK...WHITE, DEFAULT)
-yellow = "\\033[1;33m"
-...
+```json
+{
+  "dir": "~/todo",
+  "files": {
+    "todo": "~/todo/todo.txt",
+    "done": "~/todo/done.txt",
+    "report": "~/todo/report.txt"
+  },
+  "behaviour": {
+    "force": false,
+    "preserveLineNumbers": true,
+    "autoArchive": true,
+    "dateOnAdd": false,
+    "priorityOnAdd": "",
+    "verbose": 1,
+    "defaultAction": "",
+    "sourceVar": "",
+    "sentenceDelimiters": ",.:;"
+  },
+  "colors": {
+    "priA": "yellow",
+    "priB": "green",
+    "priC": "light_blue",
+    "priX": "white",
+    "colorDone": "light_grey",
+    "colorProject": "",
+    "colorContext": "",
+    "colorDate": "",
+    "colorNumber": "",
+    "colorMeta": "",
+    "map": {"yellow": "\\033[1;33m"}
+  }
+}
 ```
 
 Notes:
-- The `[colors]` keys may reference names from the `[colors.map]` (e.g. `pri_a = "yellow"`) or direct ANSI codes.
+- The document has the top-level properties `dir`, `files`, `behaviour`, and `colors`; `behaviour` deliberately retains British spelling. Compound property names use camelCase.
+- `colors` supports `priA` through `priZ`, the six displayed `color*` roles, and `map`; values may reference map names or direct ANSI codes.
 - `$HOME` and `~` are expanded in paths.
 - Env vars: `TODO_DIR`, `TODO_FILE`, `DONE_FILE`, `REPORT_FILE`, `TODOTXT_FORCE`, `TODOTXT_PRESERVE_LINE_NUMBERS`, `TODOTXT_AUTO_ARCHIVE`, `TODOTXT_DATE_ON_ADD`, `TODOTXT_PRIORITY_ON_ADD`, `TODOTXT_VERBOSE`, `TODOTXT_DEFAULT_ACTION`, `TODOTXT_SOURCEVAR`, `TODOTXT_PLAIN`, `SENTENCE_DELIMITERS`.
-- Colors are configured **only via TOML** (todo.sh uses `export PRI_A=...` in bash; in gtdo color env vars are not supported in the MVP).
+- Colors are configured **only via JSON** (todo.sh uses `export PRI_A=...` in bash; in gtdo color env vars are not supported in the MVP).
+- `internal/config/json.go` strictly decodes with `encoding/json`: unknown properties, incompatible types, and `null` are rejected.
 
 ### 5.3 Precedence
 
+Precedence: CLI flags > environment variables > JSON > defaults.
+
 1. CLI flags (todo.sh's `OVR_*`): `-a/-A`, `-c/-p`, `-f`, `-n/-N`, `-t/-T`, `-v`, `-x` (no-op).
 2. `TODO_*` / `TODOTXT_*` env vars.
-3. TOML.
+3. JSON.
 4. todo.sh defaults: verbose=1, plain=0, force=0, preserve_line_numbers=1, auto_archive=1, date_on_add=0.
 
 `-v` semantics replicated exactly: if the `TODOTXT_VERBOSE` env var is defined it wins; otherwise `max(1, count of -v)`. `-h` ≡ `shorthelp` action.
@@ -188,7 +194,7 @@ Each case: initial file state (txtar) + sequence of `gtdo ...` commands with exp
 
 ### 7.2 Unit tests
 
-Per package: `internal/todo` (priority/date parsing, filters, sort, mutations, pipeline), `internal/config` (path resolution, precedence, TOML), `internal/ui` (colors, padding, hide toggles).
+Per package: `internal/todo` (priority/date parsing, filters, sort, mutations, pipeline), `internal/config` (path resolution, precedence, strict JSON schema with `encoding/json`), `internal/ui` (colors, padding, hide toggles).
 
 ### 7.3 Parity verification
 
@@ -226,7 +232,7 @@ During development: run the real todo.sh (in /tmp) and gtdo against the same fix
 
 - **Byte parity**: for a given input, stdout, stderr, exit code, and resulting file state must be identical to todo.sh (todo.txt-cli v2.x), except §6.4 help/version texts and §2 exclusions. No addon support anywhere.
 - Reference sources available at: `/tmp/todo.txt-cli/` (todo.sh, todo.cfg, tests/, todo_completion) and `/Users/alex/Proyectos/Personales/gitia/` (structure pattern).
-- Module: `github.com/guerrero/gtdo`; binary `gtdo`. Repo layout per §4. Deps: cobra, pflag, BurntSushi/toml, rogpeppe/go-internal (tests), golang.org/x/sys.
+- Module: `github.com/guerrero/gtdo`; binary `gtdo`. Repo layout per §4. Deps: cobra, pflag, rogpeppe/go-internal (tests), golang.org/x/sys, and the standard `encoding/json` package.
 - Global flags: `-@ -+ -a -A -c -d -f -h -n -N -p -P -t -T -v -V -x`; flags only before the action (getopts style), never after (§6.1).
 - Exact messages, prompts and exit codes come from the real todo.sh (`/tmp/todo.txt-cli/todo.sh`); tests pin them byte for byte.
 - TZ=UTC and isolated HOME in txtar tests; `$ESC` env expands to a real ESC byte for color tests.
@@ -251,19 +257,19 @@ Acceptance:
 - `make lint` runs (golangci-lint may not be installed; `make lint` must at least be invocable — if golangci-lint is missing from PATH, note it in the report instead of failing the task).
 - README mentions the 20 actions, the config file, and the parity goal.
 
-## Task 2: internal/config — TOML, env vars, precedence
+## Task 2: internal/config — JSON, env vars, precedence
 
 Implement `internal/config` fully per §5:
-- TOML schema §5.2: `[paths]` dir/todo_file/done_file/report_file; `[behavior]` force, preserve_line_numbers, auto_archive, date_on_add, priority_on_add, verbose, default_action, sourcevar, sentence_delimiters; `[colors]` pri_a..pri_x, color_done, color_project, color_context, color_date, color_number, color_meta; `[colors.map]` 16 ANSI color names (NONE, BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, DEFAULT + bright variants as in todo.cfg). Use BurntSushi/toml.
-- File resolution §5.1: `-d PATH` (Options.ConfigPath from pre-parser) > `$GTDO_CONFIG` > `~/.config/gtdo/config.toml` > `/etc/gtdo/config.toml`; missing file → defaults (no fatal error).
+- JSON schema §5.2: top-level `dir`, `files`, `behaviour`, and `colors`; `files` contains `todo`, `done`, `report`; `behaviour` uses camelCase keys `force`, `preserveLineNumbers`, `autoArchive`, `dateOnAdd`, `priorityOnAdd`, `verbose`, `defaultAction`, `sourceVar`, `sentenceDelimiters`; `colors` supports camelCase `priA`..`priZ`, six `color*` roles, and `map`. Decode strictly in `internal/config/json.go` with `encoding/json`.
+- File resolution §5.1 in `internal/config/loader.go`: `-d PATH` (Options.ConfigPath from pre-parser) > `$GTDO_CONFIG` > `~/.config/gtdo/config.json` > `/etc/gtdo/config.json`; missing file → defaults (no fatal error).
 - Env vars §5.2: TODO_DIR, TODO_FILE, DONE_FILE, REPORT_FILE, TODOTXT_FORCE, TODOTXT_PRESERVE_LINE_NUMBERS, TODOTXT_AUTO_ARCHIVE, TODOTXT_DATE_ON_ADD, TODOTXT_PRIORITY_ON_ADD, TODOTXT_VERBOSE, TODOTXT_DEFAULT_ACTION, TODOTXT_SOURCEVAR, TODOTXT_PLAIN, SENTENCE_DELIMITERS.
-- Precedence §5.3: CLI flags (Options.*Set from preparse) > env vars > TOML > todo.sh defaults (verbose=1, plain=0, force=0, preserve_line_numbers=1, auto_archive=1, date_on_add=0, sentence_delimiters=",.:;").
+- Precedence §5.3: CLI flags (Options.*Set from preparse) > env vars > JSON > todo.sh defaults (verbose=1, plain=0, force=0, preserve_line_numbers=1, auto_archive=1, date_on_add=0, sentence_delimiters=",.:;").
 - `-v` semantics §5.3: if TODOTXT_VERBOSE env is defined it wins; else verbose = max(1, number of -v occurrences).
-- Path expansion: `~` and `$HOME` expanded in paths from TOML/env.
-- Colors resolvable by `[colors.map]` name (e.g. `pri_a = "yellow"`) or direct ANSI code string.
-- Colors configured only via TOML (no color env vars).
+- Path expansion: `~` and `$HOME` expanded in paths from JSON/env.
+- Colors resolvable by `colors.map` name (e.g. `"priA": "yellow"`) or direct ANSI code string.
+- Colors configured only via JSON (no color env vars).
 
-Unit tests (`internal/config/config_test.go`): precedence (flag wins over env over TOML over default, each layer), file search order, env var parsing (bool/int/string), `~`/`$HOME` expansion, TOML parse of full schema, color name resolution vs direct ANSI, missing file → defaults, `-v` counting semantics.
+Unit tests (`internal/config/config_test.go`, `internal/config/json_test.go`): precedence (flag wins over env over JSON over default, each layer), JSON file search order, env var parsing (bool/int/string), `~`/`$HOME` expansion, strict parse of the full camelCase schema, color name resolution vs direct ANSI, missing file → defaults, `-v` counting semantics, unknown fields, type mismatches, and `null` rejection.
 
 Acceptance: `go test ./internal/config/` green; `go vet ./internal/config/` clean.
 

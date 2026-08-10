@@ -17,7 +17,7 @@ El criterio de aceptación central: **para una entrada dada, la salida (stdout, 
 
 - **20 acciones** con sus aliases: `add` (a), `addm`, `addto`, `append` (app), `archive`, `del` (rm), `depri` (dp), `do` (done), `help`, `shorthelp`, `list` (ls), `listall` (lsa), `listcon` (lsc), `listpri` (lsp), `listproj` (lsprj), `move` (mv), `prepend` (prep), `pri` (p), `replace`, `report`.
 - Flags globales: `-@ -+ -a -A -c -d -f -h -n -N -p -P -t -T -v -V -x` (semántica idéntica a todo.sh, §6.1).
-- Configuración TOML propia + variables de entorno (§5).
+- Configuración JSON propia + variables de entorno (§5).
 - Configuración de colores (§5.3).
 - Completion de bash y fish (§6.6).
 - Tests migrados (§7), man page, Makefile, goreleaser (§8).
@@ -35,9 +35,9 @@ El criterio de aceptación central: **para una entrada dada, la salida (stdout, 
 | Tema | Decisión |
 |---|---|
 | Nombre del binario | `gtdo` |
-| Formato de config | TOML propio (BurntSushi/toml, como gitia) — no se parsea bash |
-| Ubicación config | `-d RUTA` / `$GTDO_CONFIG` > `~/.config/gtdo/config.toml` > `/etc/gtdo/config.toml` |
-| Precedencia | flags CLI > env vars > TOML > defaults |
+| Formato de config | JSON con la biblioteca estándar `encoding/json` — no se parsea bash |
+| Ubicación config | `-d RUTA` / `$GTDO_CONFIG` > `~/.config/gtdo/config.json` > `/etc/gtdo/config.json` |
+| Precedencia | flags CLI > env vars > JSON > defaults |
 | Env vars | `TODO_DIR`, `TODO_FILE`, `DONE_FILE`, `REPORT_FILE`, `TODOTXT_*` siguen funcionando (compatibilidad con scripting) |
 | Colores | Siempre emitidos salvo plain mode (`-p` o config), igual que todo.sh (no hay detección de TTY) |
 | Prompts interactivos | Idénticos: `Add:`, `Append:`, `Delete '...'? (y/n)`; `-f` los salta |
@@ -51,7 +51,7 @@ gtdo-cli/
 ├── internal/cli/             — árbol cobra: root + acciones, version, completions
 │   └── testdata/script/*.txtar — tests de sesión black-box
 ├── internal/todo/            — dominio: Task, parse, filtros, sort, mutaciones, pipeline _format
-├── internal/config/          — TOML + env vars + precedencia
+├── internal/config/          — JSON (`json.go`, `loader.go`) + env vars + precedencia
 ├── internal/ui/              — colores ANSI, formato de salida
 ├── internal/exitcode/        — códigos de salida
 ├── tools/genman/             — generación de man page
@@ -62,62 +62,68 @@ gtdo-cli/
 └── ACTIONS.md                — checklist (ya existe)
 ```
 
-Dependencias: `github.com/spf13/cobra`, `github.com/spf13/pflag`, `github.com/BurntSushi/toml`, `github.com/rogpeppe/go-internal` (tests), `golang.org/x/sys` (TTY si hiciera falta).
+Dependencias: `github.com/spf13/cobra`, `github.com/spf13/pflag`, `github.com/rogpeppe/go-internal` (tests), `golang.org/x/sys` (TTY si hiciera falta); la configuración usa la biblioteca estándar `encoding/json`.
 
 ## 5. Configuración
 
 ### 5.1 Resolución
 
-Orden de búsqueda del archivo TOML: `-d RUTA` si se pasa, si no `$GTDO_CONFIG`, si no `~/.config/gtdo/config.toml`, si no `/etc/gtdo/config.toml`. Si no existe ninguno → defaults. A diferencia de todo.sh no hay error fatal si falta el archivo (no hay archivo de config obligatorio).
+Config search order: `-d PATH` / `$GTDO_CONFIG` > `~/.config/gtdo/config.json` > `/etc/gtdo/config.json`.
 
-### 5.2 Schema TOML
+El cargador en `internal/config/loader.go` busca el primer archivo existente; si no existe ninguno usa los defaults. A diferencia de todo.sh no hay error fatal si falta el archivo (no hay archivo de configuración obligatorio).
 
-```toml
-[paths]
-dir = "~/todo"              # TODO_DIR
-todo_file = "~/todo/todo.txt"
-done_file = "~/todo/done.txt"
-report_file = "~/todo/report.txt"
+### 5.2 Esquema JSON
 
-[behavior]
-force = false               # TODOTXT_FORCE
-preserve_line_numbers = true  # TODOTXT_PRESERVE_LINE_NUMBERS
-auto_archive = true         # TODOTXT_AUTO_ARCHIVE
-date_on_add = false         # TODOTXT_DATE_ON_ADD
-priority_on_add = ""        # TODOTXT_PRIORITY_ON_ADD (letra A-Z)
-verbose = 1                 # TODOTXT_VERBOSE
-default_action = ""         # TODOTXT_DEFAULT_ACTION
-sourcevar = ""              # TODOTXT_SOURCEVAR (archivo fuente para listcon/listproj)
-sentence_delimiters = ",.:;"  # SENTENCE_DELIMITERS
-
-[colors]
-pri_a = "\\033[1;33m"       # YELLOW
-pri_b = "\\033[0;32m"       # GREEN
-pri_c = "\\033[1;34m"       # LIGHT_BLUE
-pri_x = "\\033[1;37m"       # WHITE
-color_done = "\\033[0;37m"  # LIGHT_GREY
-color_project = ""
-color_context = ""
-color_date = ""
-color_number = ""
-color_meta = ""
-
-[colors.map]                # mapa de 16 colores ANSI (NONE, BLACK...WHITE, DEFAULT)
-yellow = "\\033[1;33m"
-...
+```json
+{
+  "dir": "~/todo",
+  "files": {
+    "todo": "~/todo/todo.txt",
+    "done": "~/todo/done.txt",
+    "report": "~/todo/report.txt"
+  },
+  "behaviour": {
+    "force": false,
+    "preserveLineNumbers": true,
+    "autoArchive": true,
+    "dateOnAdd": false,
+    "priorityOnAdd": "",
+    "verbose": 1,
+    "defaultAction": "",
+    "sourceVar": "",
+    "sentenceDelimiters": ",.:;"
+  },
+  "colors": {
+    "priA": "yellow",
+    "priB": "green",
+    "priC": "light_blue",
+    "priX": "white",
+    "colorDone": "light_grey",
+    "colorProject": "",
+    "colorContext": "",
+    "colorDate": "",
+    "colorNumber": "",
+    "colorMeta": "",
+    "map": {"yellow": "\\033[1;33m"}
+  }
+}
 ```
 
 Notas:
-- Las claves de `[colors]` pueden referenciar nombres del `[colors.map]` (p. ej. `pri_a = "yellow"`) o códigos ANSI directos.
+- El documento tiene las propiedades superiores `dir`, `files`, `behaviour` y `colors`; `behaviour` conserva deliberadamente la grafía británica. Los nombres compuestos usan camelCase.
+- `colors` admite `priA` a `priZ`, los seis roles `color*` mostrados y `map`; sus valores pueden referenciar nombres del mapa o códigos ANSI directos.
 - `$HOME` y `~` se expanden en rutas.
 - Env vars: `TODO_DIR`, `TODO_FILE`, `DONE_FILE`, `REPORT_FILE`, `TODOTXT_FORCE`, `TODOTXT_PRESERVE_LINE_NUMBERS`, `TODOTXT_AUTO_ARCHIVE`, `TODOTXT_DATE_ON_ADD`, `TODOTXT_PRIORITY_ON_ADD`, `TODOTXT_VERBOSE`, `TODOTXT_DEFAULT_ACTION`, `TODOTXT_SOURCEVAR`, `TODOTXT_PLAIN`, `SENTENCE_DELIMITERS`.
-- Los colores se configuran **solo por TOML** (todo.sh usa `export PRI_A=...` en bash; en gtdo las env vars de color no se soportan en el MVP).
+- Los colores se configuran **solo por JSON** (todo.sh usa `export PRI_A=...` en bash; en gtdo las env vars de color no se soportan en el MVP).
+- `internal/config/json.go` decodifica estrictamente con `encoding/json`: no se aceptan claves desconocidas, tipos incompatibles ni `null`.
 
 ### 5.3 Precedencia
 
+Precedence: CLI flags > environment variables > JSON > defaults.
+
 1. Flags CLI (los `OVR_*` de todo.sh): `-a/-A`, `-c/-p`, `-f`, `-n/-N`, `-t/-T`, `-v`, `-x` (no-op).
 2. Env vars `TODO_*` / `TODOTXT_*`.
-3. TOML.
+3. JSON.
 4. Defaults de todo.sh: verbose=1, plain=0, force=0, preserve_line_numbers=1, auto_archive=1, date_on_add=0.
 
 Semántica de `-v` replicada exactamente: si `TODOTXT_VERBOSE` env está definida manda ella; si no, `max(1, nº de -v)`. `-h` ≡ acción `shorthelp`.
@@ -188,7 +194,7 @@ Cada caso: estado inicial de archivos (txtar) + secuencia de comandos `gtdo ...`
 
 ### 7.2 Unit tests
 
-Por paquete: `internal/todo` (parse de prioridad/fecha, filtros, sort, mutaciones, pipeline), `internal/config` (resolución de rutas, precedencia, TOML), `internal/ui` (colores, padding, hide toggles).
+Por paquete: `internal/todo` (parse de prioridad/fecha, filtros, sort, mutaciones, pipeline), `internal/config` (resolución de rutas, precedencia, esquema JSON estricto con `encoding/json`), `internal/ui` (colores, padding, hide toggles).
 
 ### 7.3 Verificación de paridad
 
