@@ -20,7 +20,7 @@ import (
 func runGTDO(t *testing.T, dir, stdin string, args ...string) (string, string, int) {
 	t.Helper()
 	t.Setenv("HOME", dir)
-	t.Setenv("GTDO_CONFIG", filepath.Join(dir, "gtdo-config.toml"))
+	t.Setenv("GTDO_CONFIG", filepath.Join(dir, "gtdo-config.json"))
 	t.Setenv("GTDO_TEST_NOW", "2009-02-13T04:40:00Z")
 	var out, errw strings.Builder
 	code := cli.Run(args, strings.NewReader(stdin), &out, &errw)

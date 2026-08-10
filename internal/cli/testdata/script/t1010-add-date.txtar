@@ -46,15 +46,14 @@ cmp stdout list5.want
 
 # config file third day (the shell suite bumps the clock 3600s too)
 env GTDO_TEST_NOW=2009-02-15T05:40:00Z
-exec gtdo -d dateonadd.toml add take out the trash
+exec gtdo -d dateonadd.json add take out the trash
 cmp stdout day3cfg.want
 
 exec gtdo list
 cmp stdout list6.want
 
--- dateonadd.toml --
-[behavior]
-date_on_add = true
+-- dateonadd.json --
+{"behaviour":{"dateOnAdd":true}}
 -- day1.want --
 1 2009-02-13 notice the daisies
 TODO: 1 added.

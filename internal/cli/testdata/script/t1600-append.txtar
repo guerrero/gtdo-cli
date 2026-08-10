@@ -48,14 +48,14 @@ exec gtdo append 1 '& bees'
 cmp stdout a8.want
 
 # custom SENTENCE_DELIMITERS via -d (the shell test appends the export to
-# its todo.cfg; gtdo reads the TOML key)
-exec gtdo -d delimiters.toml append 1 '&beans'
+# its todo.cfg; gtdo reads the JSON key)
+exec gtdo -d delimiters.json append 1 '&beans'
 cmp stdout a9.want
 
-exec gtdo -d delimiters.toml append 1 '%foo'
+exec gtdo -d delimiters.json append 1 '%foo'
 cmp stdout a10.want
 
-exec gtdo -d delimiters.toml append 1 '*2'
+exec gtdo -d delimiters.json append 1 '*2'
 cmp stdout a11.want
 
 -- usage.want --
@@ -71,9 +71,8 @@ thrash some hay
 chase the chickens
 -- daisies.txt --
 notice the daisies
--- delimiters.toml --
-[behavior]
-sentence_delimiters = "*,.:;&"
+-- delimiters.json --
+{"behaviour":{"sentenceDelimiters":"&%"}}
 -- a1.want --
 1 notice the daisies smell the roses
 -- a2.want --
@@ -108,6 +107,6 @@ TODO: 4 of 4 tasks shown
 -- a9.want --
 1 notice the daisies, lilies and roses; see the wasps & bees&beans
 -- a10.want --
-1 notice the daisies, lilies and roses; see the wasps & bees&beans %foo
+1 notice the daisies, lilies and roses; see the wasps & bees&beans%foo
 -- a11.want --
-1 notice the daisies, lilies and roses; see the wasps & bees&beans %foo*2
+1 notice the daisies, lilies and roses; see the wasps & bees&beans%foo *2

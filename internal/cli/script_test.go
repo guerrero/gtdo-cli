@@ -27,7 +27,7 @@ func TestScript(t *testing.T) {
 			e.Setenv("HOME", e.WorkDir)
 			// Hermetic config search: points at a file that never exists, so
 			// the search stops at defaults and never reaches /etc.
-			e.Setenv("GTDO_CONFIG", filepath.Join(e.WorkDir, "gtdo-config.toml"))
+			e.Setenv("GTDO_CONFIG", filepath.Join(e.WorkDir, "gtdo-config.json"))
 			// $ESC expands to a real ESC byte in cmpenv'd want files, so color
 			// tests can be written readably.
 			e.Setenv("ESC", "\x1b")

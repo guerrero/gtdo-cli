@@ -1,14 +1,13 @@
-# default_action also comes from the TOML config file via -d.
-exec gtdo -d default-action.toml
+# defaultAction also comes from the JSON config file via -d.
+exec gtdo -d default-action.json
 cmp stdout shorthelp.want
 
 # The explicit action still wins over the configured default.
-! exec gtdo -d default-action.toml bogus
+! exec gtdo -d default-action.json bogus
 stdout '^Usage: gtdo \[-fhpantvV\]'
 
--- default-action.toml --
-[behavior]
-default_action = "shorthelp"
+-- default-action.json --
+{"behaviour":{"defaultAction":"shorthelp"}}
 
 -- shorthelp.want --
   Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]

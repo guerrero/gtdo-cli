@@ -3,75 +3,75 @@
 # todo.sh searches $HOME/.todo/config, $HOME/todo.cfg, $HOME/.todo.cfg,
 # the XDG path, ./todo.cfg and $TODOTXT_GLOBAL_CFG_FILE, and dies with a
 # fatal error when none exists. gtdo searches -d PATH, $GTDO_CONFIG,
-# ~/.config/gtdo/config.toml and /etc/gtdo/config.toml, and a missing
+# ~/.config/gtdo/config.json and /etc/gtdo/config.json, and a missing
 # file is not an error — the defaults apply (§5.1).
 #
 # The shell test proves a config was sourced with a `touch used_config`
 # side effect in the config file itself. gtdo's config is data, not code,
-# so the proof is a [behavior] default_action that only takes effect when
+# so the proof is a behaviour.defaultAction that only takes effect when
 # the file is actually loaded.
 #
 # Scenario mapping (shell test -> gtdo):
 #   no config file        -> missing config is not fatal: defaults apply,
 #                            and with no default action the invocation is
 #                            a usage error (todo.sh dies instead)
-#   default location 1    -> ~/.config/gtdo/config.toml
+#   default location 1    -> ~/.config/gtdo/config.json
 #                            (was $HOME/.todo/config)
 #   default location 2    -> $HOME/todo.cfg — no gtdo equivalent (§5.1)
 #   default location 3    -> $HOME/.todo.cfg — no gtdo equivalent (§5.1)
-#   global config file    -> /etc/gtdo/config.toml is not writable in
+#   global config file    -> /etc/gtdo/config.json is not writable in
 #                            tests; the $GTDO_CONFIG scenario below covers
 #                            the env-var lookup
 #   command line          -> gtdo -d CONFIG_FILE (was todo.sh -d)
 #   env variable          -> GTDO_CONFIG (was TODOTXT_CFG_FILE)
-#   minimal config        -> TOML with only [paths] dir (was `export
+#   minimal config        -> JSON with only dir (was `export
 #                            TODO_DIR=.`); the other keys stay default
 #
-# The config values map test.cfg's exports 1:1 to TOML keys: TODO_DIR ->
-# [paths] dir, TODO_FILE -> todo_file, DONE_FILE -> done_file, REPORT_FILE
-# -> report_file. TMP_FILE has no gtdo equivalent: gtdo mutates files in
+# The config values map test.cfg's exports 1:1 to JSON keys: TODO_DIR ->
+# dir, TODO_FILE -> files.todo, DONE_FILE -> files.done, REPORT_FILE ->
+# files.report. TMP_FILE has no gtdo equivalent: gtdo mutates files in
 # place and never needs a temp file.
 
 # No config file: the harness points GTDO_CONFIG at a file that never
 # exists, and the default location is removed below, so nothing is found
 # and the defaults apply. Also covers -d with a missing file.
-rm .config/gtdo/config.toml
+rm .config/gtdo/config.json
 ! exec gtdo
 cmp stdout usage.want
 
-! exec gtdo -d nope.toml
+! exec gtdo -d nope.json
 cmp stdout usage.want
 
-# Config file (default location 1): ~/.config/gtdo/config.toml.
-cp test.toml .config/gtdo/config.toml
+# Config file (default location 1): ~/.config/gtdo/config.json.
+cp test.json .config/gtdo/config.json
 exec gtdo
 cmp stdout list.want
 
 # Config file (command line): -d beats the default location.
-cp test.toml alt.toml
-exec gtdo -d alt.toml
+cp test.json alt.json
+exec gtdo -d alt.json
 cmp stdout list.want
 
 # Config file (env variable): GTDO_CONFIG beats the default location.
 # The default-location file is removed first (the shell test does the
-# same with `rm -rf .todo`), so this run can only find env.toml — the
+# same with `rm -rf .todo`), so this run can only find env.json — the
 # listing proves the env-var lookup actually fired.
-rm .config/gtdo/config.toml
-env GTDO_CONFIG=env.toml
-cp test.toml env.toml
+rm .config/gtdo/config.json
+env GTDO_CONFIG=env.json
+cp test.json env.json
 exec gtdo
 cmp stdout list.want
 
-# Config file (minimal): only [paths] dir is set, everything else keeps
+# Config file (minimal): only dir is set, everything else keeps
 # its default — so there is no default action and the bare invocation is
 # a usage error, exactly like the shell test. The dir key is honored: the
 # listing reads sub/todo.txt, not the default ./todo.txt.
 rm -rf .config
 env GTDO_CONFIG=
-! exec gtdo -d minimal.toml
+! exec gtdo -d minimal.json
 cmp stdout usage.want
 
-exec gtdo -d minimal.toml list
+exec gtdo -d minimal.json list
 cmp stdout minimal-list.want
 
 -- usage.want --
@@ -81,18 +81,10 @@ Try 'gtdo -h' for more information.
 1 pay the bills
 --
 TODO: 1 of 1 tasks shown
--- test.toml --
-[paths]
-dir = "."
-todo_file = "todo.txt"
-done_file = "done.txt"
-report_file = "report.txt"
-
-[behavior]
-default_action = "list"
--- minimal.toml --
-[paths]
-dir = "sub"
+-- test.json --
+{"dir":".","files":{"todo":"todo.txt","done":"done.txt","report":"report.txt"},"behaviour":{"defaultAction":"list"}}
+-- minimal.json --
+{"dir":"sub"}
 -- todo.txt --
 pay the bills
 -- sub/todo.txt --
@@ -101,12 +93,7 @@ pay the rent
 1 pay the rent
 --
 TODO: 1 of 1 tasks shown
+-- .config/gtdo/config.json --
+{"dir":".","files":{"todo":"todo.txt","done":"done.txt","report":"report.txt"},"behaviour":{"defaultAction":"list"}}
 -- .config/gtdo/config.toml --
-[paths]
-dir = "."
-todo_file = "todo.txt"
-done_file = "done.txt"
-report_file = "report.txt"
-
-[behavior]
-default_action = "list"
+{"behaviour":{"defaultAction":"shorthelp"}}

@@ -8,7 +8,7 @@ cmp stdout shorthelp.want
 
 # -h discards every remaining argument, mirroring todo.sh's
 # set -- '-h' 'shorthelp'.
-exec gtdo -h -d config.toml bogus
+exec gtdo -h -d config.json bogus
 cmp stdout shorthelp.want
 
 -- shorthelp.want --

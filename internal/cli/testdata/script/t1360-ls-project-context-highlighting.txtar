@@ -1,26 +1,24 @@
 # Port of t1360-ls-project-context-highlighting.sh: project and context
-# highlighting with custom COLOR_PROJECT/COLOR_CONTEXT (TOML in gtdo).
+# highlighting with custom COLOR_PROJECT/COLOR_CONTEXT (JSON in gtdo).
 
 cp pri9.txt todo.txt
-exec gtdo -d colors.toml ls
+exec gtdo -d colors.json ls
 cmpenv stdout hl1.want
 
 # -p disables the custom colors
-exec gtdo -p -d colors.toml ls
+exec gtdo -p -d colors.json ls
 cmp stdout hl2.want
 
 # -@ hides contexts and their colors
-exec gtdo -@ -d colors.toml ls
+exec gtdo -@ -d colors.json ls
 cmpenv stdout hl3.want
 
 # -+ hides projects and their colors
-exec gtdo -+ -d colors.toml ls
+exec gtdo -+ -d colors.json ls
 cmpenv stdout hl4.want
 
--- colors.toml --
-[colors]
-color_context = "\u001b[1m"
-color_project = "\u001b[2m"
+-- colors.json --
+{"colors":{"colorContext":"\u001b[1m","colorProject":"\u001b[2m"}}
 -- pri9.txt --
 (A) prioritized @con01 context
 (B) prioritized +prj02 project

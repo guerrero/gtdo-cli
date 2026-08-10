@@ -20,15 +20,15 @@ import (
 // compile-time check: the palette satisfies the pipeline's color hook.
 var _ todo.Colorer = Color{}
 
-// loadConfig resolves a config from a TOML body in an isolated temp dir.
-// Colors come only from the TOML (§5.2: color env vars are not supported),
+// loadConfig resolves a config from a JSON body in an isolated temp dir.
+// Colors come only from JSON (§5.2: color env vars are not supported),
 // so TODOTXT_PLAIN is pinned off for determinism unless a test set it first.
 func loadConfig(t *testing.T, body string) config.Config {
 	t.Helper()
 	if _, ok := os.LookupEnv("TODOTXT_PLAIN"); !ok {
 		t.Setenv("TODOTXT_PLAIN", "")
 	}
-	path := filepath.Join(t.TempDir(), "config.toml")
+	path := filepath.Join(t.TempDir(), "config.json")
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func formatLines(t *testing.T, texts []string, pal Color) []string {
 // and pri_x resolve to yellow/green/light_blue/white and color_done to
 // light_grey; the word colors are off.
 func TestFromConfigDefaults(t *testing.T) {
-	pal := FromConfig(loadConfig(t, ""))
+	pal := FromConfig(loadConfig(t, `{}`))
 	want := Color{
 		PriA:    "\x1b[1;33m",
 		PriB:    "\x1b[0;32m",
@@ -71,15 +71,11 @@ func TestFromConfigDefaults(t *testing.T) {
 	}
 }
 
-// TestFromConfigResolution: [colors] values may name a map entry or carry a
+// TestFromConfigResolution: colors values may name a map entry or carry a
 // raw ANSI code (todo.cfg's literal \033 form); both resolve to the same
 // bytes. The resolution lives in config; FromConfig snapshots the result.
 func TestFromConfigResolution(t *testing.T) {
-	body := "[colors]\n" +
-		"pri_a = \"yellow\"\n" +
-		"color_date = \"\\\\033[0;31m\"\n" +
-		"color_project = \"red\"\n" +
-		"color_meta = \"\"\n"
+	body := `{"colors":{"priA":"yellow","colorDate":"\\033[0;31m","colorProject":"red","colorMeta":""}}`
 	pal := FromConfig(loadConfig(t, body))
 
 	if pal.PriA != "\x1b[1;33m" {
@@ -146,7 +142,7 @@ func TestPriorityColor(t *testing.T) {
 // no escape sequences at all and renders nothing.
 func TestPlainMode(t *testing.T) {
 	t.Setenv("TODOTXT_PLAIN", "1")
-	pal := FromConfig(loadConfig(t, "[colors]\npri_a = \"yellow\"\ncolor_project = \"red\"\n"))
+	pal := FromConfig(loadConfig(t, `{"colors":{"priA":"yellow","colorProject":"red"}}`))
 	if !reflect.DeepEqual(pal, Color{}) {
 		t.Errorf("plain palette = %+v, want all-empty %+v", pal, Color{})
 	}
@@ -190,7 +186,7 @@ func TestPipelineHighlighting(t *testing.T) {
 	}
 
 	t.Run("colored", func(t *testing.T) {
-		body := "[colors]\ncolor_context = \"\\\\033[1m\"\ncolor_project = \"\\\\033[2m\"\n"
+		body := `{"colors":{"colorContext":"\\033[1m","colorProject":"\\033[2m"}}`
 		got := formatLines(t, t1360, FromConfig(loadConfig(t, body)))
 		want := []string{
 			"\x1b[1;33m1 (A) prioritized \x1b[1m@con01\x1b[0m\x1b[1;33m context\x1b[0m",
@@ -227,8 +223,7 @@ func TestPipelineHighlighting(t *testing.T) {
 	})
 
 	t.Run("date-number-meta", func(t *testing.T) {
-		body := "[colors]\ncolor_date = \"\\\\033[0;31m\"\n" +
-			"color_meta = \"\\\\033[0;32m\"\ncolor_number = \"\\\\033[0;34m\"\n"
+		body := `{"colors":{"colorDate":"\\033[0;31m","colorMeta":"\\033[0;32m","colorNumber":"\\033[0;34m"}}`
 		got := formatLines(t, []string{
 			"2018-11-11 task with date",
 			"task with metadata due:2018-12-31",

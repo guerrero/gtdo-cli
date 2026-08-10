@@ -15,15 +15,14 @@ exec gtdo -t addto garden.txt mow the lawn
 cmp stdout d3.want
 
 env GTDO_TEST_NOW=2009-02-15T05:40:00Z
-exec gtdo -d dateonadd.toml addto garden.txt take out the trash
+exec gtdo -d dateonadd.json addto garden.txt take out the trash
 cmp stdout d4.want
 
 exec cat garden.txt
 cmp stdout dfile.want
 
--- dateonadd.toml --
-[behavior]
-date_on_add = true
+-- dateonadd.json --
+{"behaviour":{"dateOnAdd":true}}
 -- d1.want --
 1 2009-02-13 notice the daisies
 GARDEN: 1 added.

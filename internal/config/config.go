@@ -1,5 +1,5 @@
 // Package config resolves gtdo's configuration: CLI flags (pre-parsed),
-// environment variables, TOML file, and defaults, in that order of
+// environment variables, JSON file, and defaults, in that order of
 // precedence (§5.3 of the design plan).
 package config
 
@@ -31,20 +31,20 @@ type Options struct {
 }
 
 // Config is the fully resolved configuration the rest of gtdo consumes:
-// flags, environment, TOML file, and defaults merged in that order. Paths
+// flags, environment, JSON file, and defaults merged in that order. Paths
 // have ~ and $HOME expanded.
 type Config struct {
-	// ConfigPath is the TOML file that was loaded, or "" when none existed.
+	// ConfigPath is the JSON file that was loaded, or "" when none existed.
 	ConfigPath string
 
-	// Paths (§5.2 [paths]). The file defaults derive from the resolved Dir,
+	// Paths (§5.2 files). The file defaults derive from the resolved Dir,
 	// mirroring todo.cfg's ${TODO_DIR}/todo.txt and friends.
 	Dir        string
 	TodoFile   string
 	DoneFile   string
 	ReportFile string
 
-	// Behavior (§5.2 [behavior]).
+	// Behaviour (§5.2 behaviour).
 	Force               bool
 	PreserveLineNumbers bool
 	AutoArchive         bool
@@ -69,7 +69,7 @@ type Config struct {
 	colors map[string]string // resolved ANSI codes by role; "" = off
 }
 
-// Color returns the ANSI escape sequence for a color role — the [colors]
+// Color returns the ANSI escape sequence for a color role — the colors
 // keys: pri_a..pri_z, color_done, color_project, color_context, color_date,
 // color_number, color_meta. It returns "" when the role is unset, unknown,
 // or plain mode is on. internal/ui consumes these codes.
@@ -87,7 +87,7 @@ func (c *Config) PriorityColor(letter byte) string {
 	return c.Color("pri_x")
 }
 
-// Load resolves the effective configuration. The TOML file is searched in
+// Load resolves the effective configuration. The JSON file is searched in
 // §5.1 order; a missing file is not an error and yields the defaults.
 func Load(opts Options) (Config, error) {
 	home, err := os.UserHomeDir()
@@ -98,33 +98,33 @@ func Load(opts Options) (Config, error) {
 }
 
 // resolve merges the layers for every setting: CLI flags (opts) beat the
-// environment, which beats the TOML file, which beats todo.sh's defaults.
+// environment, which beats the JSON file, which beats todo.sh's defaults.
 func resolve(opts Options, f fileConfig, home string) Config {
-	dir := firstNonEmpty(envOr("TODO_DIR", ""), f.Paths.Dir, home)
+	dir := firstNonEmpty(envOr("TODO_DIR", ""), f.Dir, home)
 	dir = expandHome(dir, home)
 
 	cfg := Config{
 		Dir:                 dir,
-		TodoFile:            expandHome(firstNonEmpty(envOr("TODO_FILE", ""), f.Paths.TodoFile, filepath.Join(dir, "todo.txt")), home),
-		DoneFile:            expandHome(firstNonEmpty(envOr("DONE_FILE", ""), f.Paths.DoneFile, filepath.Join(dir, "done.txt")), home),
-		ReportFile:          expandHome(firstNonEmpty(envOr("REPORT_FILE", ""), f.Paths.ReportFile, filepath.Join(dir, "report.txt")), home),
-		Force:               pickBool(opts.ForceSet, opts.Force, "TODOTXT_FORCE", f.Behavior.Force),
-		PreserveLineNumbers: pickBool(opts.PreserveSet, opts.Preserve, "TODOTXT_PRESERVE_LINE_NUMBERS", f.Behavior.PreserveLineNumbers),
-		AutoArchive:         pickBool(opts.AutoArchiveSet, opts.AutoArchive, "TODOTXT_AUTO_ARCHIVE", f.Behavior.AutoArchive),
-		DateOnAdd:           pickBool(opts.DateOnAddSet, opts.DateOnAdd, "TODOTXT_DATE_ON_ADD", f.Behavior.DateOnAdd),
+		TodoFile:            expandHome(firstNonEmpty(envOr("TODO_FILE", ""), f.Files.Todo, filepath.Join(dir, "todo.txt")), home),
+		DoneFile:            expandHome(firstNonEmpty(envOr("DONE_FILE", ""), f.Files.Done, filepath.Join(dir, "done.txt")), home),
+		ReportFile:          expandHome(firstNonEmpty(envOr("REPORT_FILE", ""), f.Files.Report, filepath.Join(dir, "report.txt")), home),
+		Force:               pickBool(opts.ForceSet, opts.Force, "TODOTXT_FORCE", f.Behaviour.Force),
+		PreserveLineNumbers: pickBool(opts.PreserveSet, opts.Preserve, "TODOTXT_PRESERVE_LINE_NUMBERS", f.Behaviour.PreserveLineNumbers),
+		AutoArchive:         pickBool(opts.AutoArchiveSet, opts.AutoArchive, "TODOTXT_AUTO_ARCHIVE", f.Behaviour.AutoArchive),
+		DateOnAdd:           pickBool(opts.DateOnAddSet, opts.DateOnAdd, "TODOTXT_DATE_ON_ADD", f.Behaviour.DateOnAdd),
 		Plain:               pickBool(opts.PlainSet, opts.Plain, "TODOTXT_PLAIN", false),
 		HideProjects:        opts.HideProjects,
 		HideContexts:        opts.HideContexts,
 		HidePriority:        opts.HidePriority,
-		PriorityOnAdd:       pickString("TODOTXT_PRIORITY_ON_ADD", f.Behavior.PriorityOnAdd),
-		DefaultAction:       pickString("TODOTXT_DEFAULT_ACTION", f.Behavior.DefaultAction),
-		SourceVar:           pickString("TODOTXT_SOURCEVAR", f.Behavior.SourceVar),
-		SentenceDelimiters:  pickString("SENTENCE_DELIMITERS", f.Behavior.SentenceDelimiters),
-		TaskFormat:          f.Behavior.TaskFormat,
+		PriorityOnAdd:       pickString("TODOTXT_PRIORITY_ON_ADD", f.Behaviour.PriorityOnAdd),
+		DefaultAction:       pickString("TODOTXT_DEFAULT_ACTION", f.Behaviour.DefaultAction),
+		SourceVar:           pickString("TODOTXT_SOURCEVAR", f.Behaviour.SourceVar),
+		SentenceDelimiters:  pickString("SENTENCE_DELIMITERS", f.Behaviour.SentenceDelimiters),
+		TaskFormat:          f.Behaviour.TaskFormat,
 	}
 	// The -v rule (§5.3): TODOTXT_VERBOSE wins when it is defined; otherwise
-	// max(1, -v count) wins over the TOML value, which defaults to 1.
-	cfg.Verbose = f.Behavior.Verbose
+	// max(1, -v count) wins over the JSON value, which defaults to 1.
+	cfg.Verbose = f.Behaviour.Verbose
 	if v, ok := envInt("TODOTXT_VERBOSE"); ok {
 		cfg.Verbose = v
 	} else if opts.VerboseCount > 0 {

@@ -9,7 +9,7 @@ const DefaultTaskFormat = "[checked][priority][uuid][content][keywords][project]
 // ${TODO_DIR}/todo.txt and friends.
 func defaultFileConfig() fileConfig {
 	return fileConfig{
-		Behavior: behaviorTOML{
+		Behaviour: behaviourJSON{
 			PreserveLineNumbers: true,
 			AutoArchive:         true,
 			Verbose:             1,
@@ -20,12 +20,12 @@ func defaultFileConfig() fileConfig {
 	}
 }
 
-// defaultColors returns the [colors] defaults: todo.sh's PRI_A..PRI_C, PRI_X
+// defaultColors returns the colors defaults: todo.sh's PRI_A..PRI_C, PRI_X
 // and COLOR_DONE reference the color map by name; everything else is off.
 // Map stays nil: the built-in names are merged in resolveColors so that
 // user overrides always win regardless of map iteration order.
-func defaultColors() colorsTOML {
-	return colorsTOML{
+func defaultColors() colorsJSON {
+	return colorsJSON{
 		PriA:      "yellow",
 		PriB:      "green",
 		PriC:      "light_blue",

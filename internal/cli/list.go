@@ -4,7 +4,7 @@ package cli
 // and listproj, wired to the _format pipeline in internal/todo with
 // todo.sh-exact summaries, priority ranges, and sigil extraction. The
 // Colorer is the resolved config itself: *config.Config keeps the
-// per-letter pri_a..pri_z TOML colors (Task 5's wiring decision), exactly
+// per-letter runtime pri_a..pri_z roles resolved from JSON keys priA..priZ,
 // like todo.sh's PRI_<letter> exports with the PRI_X fallback.
 
 import (

@@ -2,10 +2,10 @@ package config
 
 import "strings"
 
-// roles returns the [colors] keys the colorizer understands. The schema
-// documents pri_a..pri_x; like todo.sh's PRI_<letter> every letter is valid,
+// roles returns the runtime color roles the colorizer understands. The JSON
+// schema uses priA..priZ; like todo.sh's PRI_<letter> every letter is valid,
 // with pri_x as the fallback for letters without a color of their own.
-func (c colorsTOML) roles() map[string]string {
+func (c colorsJSON) roles() map[string]string {
 	return map[string]string{
 		"pri_a": c.PriA, "pri_b": c.PriB, "pri_c": c.PriC, "pri_d": c.PriD,
 		"pri_e": c.PriE, "pri_f": c.PriF, "pri_g": c.PriG, "pri_h": c.PriH,
@@ -25,10 +25,10 @@ func (c colorsTOML) roles() map[string]string {
 }
 
 // resolveColors computes the final ANSI code for every role. A value names a
-// [colors.map] entry (case-insensitive) or is a raw ANSI string with \033
+// colors.map entry (case-insensitive) or is a raw ANSI string with \033
 // translated to ESC; an empty value turns the color off. Plain mode turns
 // every color off.
-func resolveColors(c colorsTOML, plain bool) map[string]string {
+func resolveColors(c colorsJSON, plain bool) map[string]string {
 	m := builtinColorMap()
 	for name, code := range c.Map {
 		m[strings.ToLower(name)] = code // user overrides win
@@ -42,8 +42,8 @@ func resolveColors(c colorsTOML, plain bool) map[string]string {
 		roles[role] = resolveColor(m, value)
 	}
 	// default is todo.sh's DEFAULT, the reset emitted after every colored
-	// word: it is not a [colors] key, defaults to \033[0m, and is
-	// re-mappable through [colors.map] (t1330's customized highlighting).
+	// word: it is not a JSON colors key, defaults to \033[0m, and is
+	// re-mappable through colors.map (t1330's customized highlighting).
 	if plain {
 		roles["default"] = ""
 	} else {
@@ -52,7 +52,7 @@ func resolveColors(c colorsTOML, plain bool) map[string]string {
 	return roles
 }
 
-// resolveColor resolves one [colors] value against the merged color map.
+// resolveColor resolves one JSON colors value against the merged color map.
 func resolveColor(m map[string]string, value string) string {
 	if code, ok := m[strings.ToLower(value)]; ok {
 		return unescapeColor(code)

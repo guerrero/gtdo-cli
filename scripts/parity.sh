@@ -4,7 +4,7 @@
 # (todo.txt-cli) and gtdo (design plan §7.3).
 #
 # Both binaries run the same flows against the same fixture and the same
-# config values (todo.sh's bash config and gtdo's TOML carry the same
+# config values (todo.sh's bash config and gtdo's JSON carry the same
 # paths), and stdout, stderr, exit codes, and resulting file states must
 # match byte for byte. Any difference is printed and the script exits
 # non-zero.
@@ -44,7 +44,7 @@ export TMPDIR="$WORK"       # todo.sh's sed wrapper stages its temp file here
 TODO_DIR="$WORK/todo"
 fail=0
 
-# --- configs: the same values in both formats --------------------------
+# --- configs: todo.sh's bash and gtdo's JSON use the same values --------
 cat > "$WORK/todo.cfg" <<EOF
 export TODO_DIR="$TODO_DIR"
 export TODO_FILE="\$TODO_DIR/todo.txt"
@@ -53,12 +53,15 @@ export REPORT_FILE="\$TODO_DIR/report.txt"
 export TMP_FILE="\$TODO_DIR/todo.tmp"
 EOF
 
-cat > "$WORK/config.toml" <<EOF
-[paths]
-dir = "$TODO_DIR"
-todo_file = "$TODO_DIR/todo.txt"
-done_file = "$TODO_DIR/done.txt"
-report_file = "$TODO_DIR/report.txt"
+cat > "$WORK/config.json" <<EOF
+{
+  "dir": "$TODO_DIR",
+  "files": {
+    "todo": "$TODO_DIR/todo.txt",
+    "done": "$TODO_DIR/done.txt",
+    "report": "$TODO_DIR/report.txt"
+  }
+}
 EOF
 
 # --- fake date (test-lib.sh's bin/date shim) ---------------------------
@@ -122,7 +125,7 @@ run_both() {
         cd "$WORK"
         unset "${!TODOTXT_@}" TODO_FILE DONE_FILE REPORT_FILE TMP_FILE \
             TODO_DIR SENTENCE_DELIMITERS GTDO_CONFIG
-        GTDO_TEST_NOW=$NOW "$WORK/gtdo" -d "$WORK/config.toml" "$@" \
+        GTDO_TEST_NOW=$NOW "$WORK/gtdo" -d "$WORK/config.json" "$@" \
             < "$WORK/stdin" > "$WORK/gd.out" 2> "$WORK/gd.err"
     )
     gdr=$?

@@ -6,8 +6,9 @@ import (
 	"github.com/guerrero/gtdo/internal/config"
 )
 
-// Color is a resolved snapshot of todo.cfg's color assignments (§5.2
-// [colors]): the priority colors pri_a..pri_c with the pri_x fallback,
+// Color is a resolved snapshot of gtdo's JSON color assignments (§5.2
+// colors): JSON keys priA..priC resolve to runtime roles pri_a..pri_c,
+// with the pri_x fallback,
 // color_done, the per-word colors, and default (the reset emitted after
 // every colored word). Each field holds the final ANSI escape sequence;
 // in plain mode every field is empty, so a zero Color renders uncolored.

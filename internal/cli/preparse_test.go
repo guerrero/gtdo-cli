@@ -70,20 +70,20 @@ func TestPreparse(t *testing.T) {
 		},
 		{
 			"d with separate arg",
-			[]string{"-d", "cfg.toml", "list"},
+			[]string{"-d", "cfg.json", "list"},
 			"list", nil,
 			func(t *testing.T, o *config.Options) {
-				if o.ConfigPath != "cfg.toml" {
+				if o.ConfigPath != "cfg.json" {
 					t.Error("config path")
 				}
 			},
 		},
 		{
 			"d in cluster",
-			[]string{"-Pd", "cfg.toml", "list"},
+			[]string{"-Pd", "cfg.json", "list"},
 			"list", nil,
 			func(t *testing.T, o *config.Options) {
-				if o.ConfigPath != "cfg.toml" || !o.HidePriority {
+				if o.ConfigPath != "cfg.json" || !o.HidePriority {
 					t.Error("cluster -d")
 				}
 			},

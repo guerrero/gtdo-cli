@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +30,7 @@ func writeConfig(t *testing.T, path, body string) string {
 // withOpts returns opts plus a ConfigPath pointing at a file with body.
 func withOpts(t *testing.T, opts Options, body string) Options {
 	t.Helper()
-	opts.ConfigPath = writeConfig(t, filepath.Join(t.TempDir(), "config.toml"), body)
+	opts.ConfigPath = writeConfig(t, filepath.Join(t.TempDir(), "config.json"), body)
 	return opts
 }
 
@@ -46,7 +47,7 @@ func loadAt(t *testing.T, opts Options, h, sys string) Config {
 // loadWith loads with an isolated HOME and a nonexistent system config.
 func loadWith(t *testing.T, opts Options, h string) Config {
 	t.Helper()
-	return loadAt(t, opts, h, filepath.Join(t.TempDir(), "nonexistent", "config.toml"))
+	return loadAt(t, opts, h, filepath.Join(t.TempDir(), "nonexistent", "config.json"))
 }
 
 // TestDefaults pins the todo.sh defaults (§5.3) with no config file, no env,
@@ -116,14 +117,14 @@ func TestTaskFormatFromTOML(t *testing.T) {
 }
 
 // TestFileSearchOrder pins §5.1: -d PATH, $GTDO_CONFIG,
-// ~/.config/gtdo/config.toml, /etc/gtdo/config.toml; none existing → defaults.
+// ~/.config/gtdo/config.json, /etc/gtdo/config.json; none existing → defaults.
 // Each subtest gets a fresh home so earlier subtests' files never leak in.
 func TestFileSearchOrder(t *testing.T) {
 	t.Run("dash d wins", func(t *testing.T) {
 		h := home(t)
-		d := writeConfig(t, filepath.Join(t.TempDir(), "d", "config.toml"), "[behavior]\nverbose = 2\n")
-		env := writeConfig(t, filepath.Join(t.TempDir(), "env", "config.toml"), "[behavior]\nverbose = 3\n")
-		writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.toml"), "[behavior]\nverbose = 4\n")
+		d := writeConfig(t, filepath.Join(t.TempDir(), "d", "config.json"), `{"behaviour":{"verbose":2}}`)
+		env := writeConfig(t, filepath.Join(t.TempDir(), "env", "config.json"), `{"behaviour":{"verbose":3}}`)
+		writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.json"), `{"behaviour":{"verbose":4}}`)
 		t.Setenv("GTDO_CONFIG", env)
 		cfg := loadWith(t, Options{ConfigPath: d}, h)
 		if cfg.Verbose != 2 || cfg.ConfigPath != d {
@@ -133,8 +134,8 @@ func TestFileSearchOrder(t *testing.T) {
 
 	t.Run("gtdo config env wins over home", func(t *testing.T) {
 		h := home(t)
-		env := writeConfig(t, filepath.Join(t.TempDir(), "env", "config.toml"), "[behavior]\nverbose = 3\n")
-		writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.toml"), "[behavior]\nverbose = 4\n")
+		env := writeConfig(t, filepath.Join(t.TempDir(), "env", "config.json"), `{"behaviour":{"verbose":3}}`)
+		writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.json"), `{"behaviour":{"verbose":4}}`)
 		t.Setenv("GTDO_CONFIG", env)
 		cfg := loadWith(t, Options{}, h)
 		if cfg.Verbose != 3 || cfg.ConfigPath != env {
@@ -144,8 +145,8 @@ func TestFileSearchOrder(t *testing.T) {
 
 	t.Run("home config wins over system", func(t *testing.T) {
 		h := home(t)
-		sys := writeConfig(t, filepath.Join(t.TempDir(), "etc", "gtdo", "config.toml"), "[behavior]\nverbose = 5\n")
-		homeCfg := writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.toml"), "[behavior]\nverbose = 4\n")
+		sys := writeConfig(t, filepath.Join(t.TempDir(), "etc", "gtdo", "config.json"), `{"behaviour":{"verbose":5}}`)
+		homeCfg := writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.json"), `{"behaviour":{"verbose":4}}`)
 		cfg := loadAt(t, Options{}, h, sys)
 		if cfg.Verbose != 4 || cfg.ConfigPath != homeCfg {
 			t.Errorf("Verbose = %d, ConfigPath = %q; want 4, %q", cfg.Verbose, cfg.ConfigPath, homeCfg)
@@ -154,7 +155,7 @@ func TestFileSearchOrder(t *testing.T) {
 
 	t.Run("system config is the last resort", func(t *testing.T) {
 		h := home(t)
-		sys := writeConfig(t, filepath.Join(t.TempDir(), "etc", "gtdo", "config.toml"), "[behavior]\nverbose = 5\n")
+		sys := writeConfig(t, filepath.Join(t.TempDir(), "etc", "gtdo", "config.json"), `{"behaviour":{"verbose":5}}`)
 		cfg := loadAt(t, Options{}, h, sys)
 		if cfg.Verbose != 5 || cfg.ConfigPath != sys {
 			t.Errorf("Verbose = %d, ConfigPath = %q; want 5, %q", cfg.Verbose, cfg.ConfigPath, sys)
@@ -163,9 +164,9 @@ func TestFileSearchOrder(t *testing.T) {
 
 	t.Run("missing dash d falls through", func(t *testing.T) {
 		h := home(t)
-		env := writeConfig(t, filepath.Join(t.TempDir(), "env", "config.toml"), "[behavior]\nverbose = 3\n")
+		env := writeConfig(t, filepath.Join(t.TempDir(), "env", "config.json"), `{"behaviour":{"verbose":3}}`)
 		t.Setenv("GTDO_CONFIG", env)
-		cfg := loadWith(t, Options{ConfigPath: filepath.Join(t.TempDir(), "missing.toml")}, h)
+		cfg := loadWith(t, Options{ConfigPath: filepath.Join(t.TempDir(), "missing.json")}, h)
 		if cfg.Verbose != 3 || cfg.ConfigPath != env {
 			t.Errorf("Verbose = %d, ConfigPath = %q; want 3, %q", cfg.Verbose, cfg.ConfigPath, env)
 		}
@@ -173,8 +174,8 @@ func TestFileSearchOrder(t *testing.T) {
 
 	t.Run("gtdo config expands home", func(t *testing.T) {
 		h := home(t)
-		cfgFile := writeConfig(t, filepath.Join(h, "cfg.toml"), "[behavior]\nverbose = 6\n")
-		t.Setenv("GTDO_CONFIG", "~/cfg.toml")
+		cfgFile := writeConfig(t, filepath.Join(h, "cfg.json"), `{"behaviour":{"verbose":6}}`)
+		t.Setenv("GTDO_CONFIG", "~/cfg.json")
 		cfg := loadWith(t, Options{}, h)
 		if cfg.Verbose != 6 || cfg.ConfigPath != cfgFile {
 			t.Errorf("Verbose = %d, ConfigPath = %q; want 6, %q", cfg.Verbose, cfg.ConfigPath, cfgFile)
@@ -189,31 +190,40 @@ func TestFileSearchOrder(t *testing.T) {
 			t.Errorf("ConfigPath = %q, Verbose = %d; want empty, 1", cfg.ConfigPath, cfg.Verbose)
 		}
 	})
+
+	t.Run("legacy home toml is ignored", func(t *testing.T) {
+		h := home(t)
+		writeConfig(t, filepath.Join(h, ".config", "gtdo", "config.toml"), `{"behaviour":{"verbose":9}}`)
+		cfg := loadWith(t, Options{}, h)
+		if cfg.ConfigPath != "" || cfg.Verbose != 1 {
+			t.Fatalf("ConfigPath = %q, Verbose = %d; want empty, 1", cfg.ConfigPath, cfg.Verbose)
+		}
+	})
 }
 
-// TestPrecedenceBools stacks TOML, env, and flag layers for each boolean key:
+// TestPrecedenceBools stacks JSON, env, and flag layers for each boolean key:
 // the highest layer that sets the value wins (§5.3).
 func TestPrecedenceBools(t *testing.T) {
 	cases := []struct {
 		name    string
-		tomlKey string // "" when the key has no TOML counterpart
+		jsonKey string // "" when the key has no JSON counterpart
 		envName string
 		mkFlag  func(bool) Options
 		get     func(Config) bool
 		def     bool
 	}{
 		{"force", "force", "TODOTXT_FORCE", func(b bool) Options { return Options{Force: b, ForceSet: true} }, func(c Config) bool { return c.Force }, false},
-		{"preserve_line_numbers", "preserve_line_numbers", "TODOTXT_PRESERVE_LINE_NUMBERS", func(b bool) Options { return Options{Preserve: b, PreserveSet: true} }, func(c Config) bool { return c.PreserveLineNumbers }, true},
-		{"auto_archive", "auto_archive", "TODOTXT_AUTO_ARCHIVE", func(b bool) Options { return Options{AutoArchive: b, AutoArchiveSet: true} }, func(c Config) bool { return c.AutoArchive }, true},
-		{"date_on_add", "date_on_add", "TODOTXT_DATE_ON_ADD", func(b bool) Options { return Options{DateOnAdd: b, DateOnAddSet: true} }, func(c Config) bool { return c.DateOnAdd }, false},
+		{"preserveLineNumbers", "preserveLineNumbers", "TODOTXT_PRESERVE_LINE_NUMBERS", func(b bool) Options { return Options{Preserve: b, PreserveSet: true} }, func(c Config) bool { return c.PreserveLineNumbers }, true},
+		{"autoArchive", "autoArchive", "TODOTXT_AUTO_ARCHIVE", func(b bool) Options { return Options{AutoArchive: b, AutoArchiveSet: true} }, func(c Config) bool { return c.AutoArchive }, true},
+		{"dateOnAdd", "dateOnAdd", "TODOTXT_DATE_ON_ADD", func(b bool) Options { return Options{DateOnAdd: b, DateOnAddSet: true} }, func(c Config) bool { return c.DateOnAdd }, false},
 		{"plain", "", "TODOTXT_PLAIN", func(b bool) Options { return Options{Plain: b, PlainSet: true} }, func(c Config) bool { return c.Plain }, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := home(t)
-			body := "[behavior]\n"
-			if tc.tomlKey != "" {
-				body += tc.tomlKey + " = true\n"
+			body := `{}`
+			if tc.jsonKey != "" {
+				body = fmt.Sprintf(`{"behaviour":{"%s":true}}`, tc.jsonKey)
 			}
 
 			// Default layer.
@@ -221,17 +231,17 @@ func TestPrecedenceBools(t *testing.T) {
 				t.Errorf("default = %v, want %v", got, tc.def)
 			}
 
-			// TOML layer beats the default.
-			if tc.tomlKey != "" {
+			// JSON layer beats the default.
+			if tc.jsonKey != "" {
 				if got := tc.get(loadWith(t, withOpts(t, Options{}, body), h)); !got {
-					t.Error("TOML layer did not win over the default")
+					t.Error("JSON layer did not win over the default")
 				}
 			}
 
-			// Env layer beats TOML.
+			// Env layer beats JSON.
 			t.Setenv(tc.envName, "0")
 			if got := tc.get(loadWith(t, withOpts(t, Options{}, body), h)); got {
-				t.Error("env layer did not win over TOML")
+				t.Error("env layer did not win over JSON")
 			}
 
 			// Flag layer beats env.
@@ -242,36 +252,36 @@ func TestPrecedenceBools(t *testing.T) {
 	}
 }
 
-// TestPrecedenceStrings stacks TOML and env layers for each string key.
+// TestPrecedenceStrings stacks JSON and env layers for each string key.
 func TestPrecedenceStrings(t *testing.T) {
 	cases := []struct {
 		name    string
-		tomlKey string
+		jsonKey string
 		envName string
 		get     func(Config) string
 		def     string
 	}{
-		{"priority_on_add", "priority_on_add", "TODOTXT_PRIORITY_ON_ADD", func(c Config) string { return c.PriorityOnAdd }, ""},
-		{"default_action", "default_action", "TODOTXT_DEFAULT_ACTION", func(c Config) string { return c.DefaultAction }, ""},
-		{"sourcevar", "sourcevar", "TODOTXT_SOURCEVAR", func(c Config) string { return c.SourceVar }, ""},
-		{"sentence_delimiters", "sentence_delimiters", "SENTENCE_DELIMITERS", func(c Config) string { return c.SentenceDelimiters }, ",.:;"},
+		{"priorityOnAdd", "priorityOnAdd", "TODOTXT_PRIORITY_ON_ADD", func(c Config) string { return c.PriorityOnAdd }, ""},
+		{"defaultAction", "defaultAction", "TODOTXT_DEFAULT_ACTION", func(c Config) string { return c.DefaultAction }, ""},
+		{"sourceVar", "sourceVar", "TODOTXT_SOURCEVAR", func(c Config) string { return c.SourceVar }, ""},
+		{"sentenceDelimiters", "sentenceDelimiters", "SENTENCE_DELIMITERS", func(c Config) string { return c.SentenceDelimiters }, ",.:;"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := home(t)
-			body := "[behavior]\n" + tc.tomlKey + " = \"toml\"\n"
+			body := fmt.Sprintf(`{"behaviour":{"%s":"json"}}`, tc.jsonKey)
 
 			// Default layer.
 			if got := tc.get(loadWith(t, Options{}, h)); got != tc.def {
 				t.Errorf("default = %q, want %q", got, tc.def)
 			}
 
-			// TOML layer beats the default.
-			if got := tc.get(loadWith(t, withOpts(t, Options{}, body), h)); got != "toml" {
-				t.Errorf("TOML = %q, want %q", got, "toml")
+			// JSON layer beats the default.
+			if got := tc.get(loadWith(t, withOpts(t, Options{}, body), h)); got != "json" {
+				t.Errorf("JSON = %q, want %q", got, "json")
 			}
 
-			// Env layer beats TOML.
+			// Env layer beats JSON.
 			t.Setenv(tc.envName, "env")
 			if got := tc.get(loadWith(t, withOpts(t, Options{}, body), h)); got != "env" {
 				t.Errorf("env = %q, want %q", got, "env")
@@ -281,22 +291,22 @@ func TestPrecedenceStrings(t *testing.T) {
 }
 
 // TestVerboseCounting pins the §5.3 -v rule: TODOTXT_VERBOSE wins when it is
-// defined; otherwise the -v count wins over TOML; otherwise TOML; otherwise 1.
+// defined; otherwise the -v count wins over JSON; otherwise JSON; otherwise 1.
 func TestVerboseCounting(t *testing.T) {
 	h := home(t)
-	body := "[behavior]\nverbose = 3\n"
+	body := `{"behaviour":{"verbose":3}}`
 
 	cases := []struct {
 		name    string
 		env     string
 		envSet  bool
 		count   int
-		useTOML bool
+		useJSON bool
 		want    int
 	}{
-		{"no env, no flags, no toml", "", false, 0, false, 1},
-		{"no env, no flags, toml", "", false, 0, true, 3},
-		{"two dash v beats toml", "", false, 2, true, 2},
+		{"no env, no flags, no json", "", false, 0, false, 1},
+		{"no env, no flags, json", "", false, 0, true, 3},
+		{"two dash v beats json", "", false, 2, true, 2},
 		{"env beats dash v", "5", true, 3, true, 5},
 		{"env zero suppresses output", "0", true, 3, true, 0},
 		{"unparseable env is unset", "abc", true, 2, true, 2},
@@ -305,7 +315,7 @@ func TestVerboseCounting(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := Options{VerboseCount: tc.count}
-			if tc.useTOML {
+			if tc.useJSON {
 				opts = withOpts(t, opts, body)
 			}
 			if tc.envSet {
@@ -348,8 +358,8 @@ func TestEnvParsing(t *testing.T) {
 
 	t.Run("empty bool env is unset", func(t *testing.T) {
 		t.Setenv("TODOTXT_FORCE", "")
-		if got := loadWith(t, withOpts(t, Options{}, "[behavior]\nforce = true\n"), h).Force; !got {
-			t.Error("empty TODOTXT_FORCE shadowed the TOML value")
+		if got := loadWith(t, withOpts(t, Options{}, `{"behaviour":{"force":true}}`), h).Force; !got {
+			t.Error("empty TODOTXT_FORCE shadowed the JSON value")
 		}
 	})
 
@@ -362,8 +372,8 @@ func TestEnvParsing(t *testing.T) {
 
 	t.Run("garbage int is unset", func(t *testing.T) {
 		t.Setenv("TODOTXT_VERBOSE", "abc")
-		if got := loadWith(t, withOpts(t, Options{}, "[behavior]\nverbose = 3\n"), h).Verbose; got != 3 {
-			t.Errorf("Verbose = %d, want TOML value 3", got)
+		if got := loadWith(t, withOpts(t, Options{}, `{"behaviour":{"verbose":3}}`), h).Verbose; got != 3 {
+			t.Errorf("Verbose = %d, want JSON value 3", got)
 		}
 	})
 
@@ -375,19 +385,13 @@ func TestEnvParsing(t *testing.T) {
 	})
 }
 
-// TestPathExpansion covers "~" and "$HOME" expansion in TOML and env paths,
+// TestPathExpansion covers "~" and "$HOME" expansion in JSON and env paths,
 // and the derived default file locations under the resolved dir.
 func TestPathExpansion(t *testing.T) {
 	h := home(t)
 
-	t.Run("toml paths", func(t *testing.T) {
-		cfg := loadWith(t, withOpts(t, Options{}, `
-[paths]
-dir = "~/todo"
-todo_file = "~"
-done_file = "$HOME/done.txt"
-report_file = "a$HOME/b"
-`), h)
+	t.Run("json paths", func(t *testing.T) {
+		cfg := loadWith(t, withOpts(t, Options{}, `{"dir":"~/todo","files":{"todo":"~","done":"$HOME/done.txt","report":"a$HOME/b"}}`), h)
 		if cfg.Dir != filepath.Join(h, "todo") {
 			t.Errorf("Dir = %q, want %q", cfg.Dir, filepath.Join(h, "todo"))
 		}
@@ -422,7 +426,7 @@ report_file = "a$HOME/b"
 	})
 
 	t.Run("file defaults follow resolved dir", func(t *testing.T) {
-		cfg := loadWith(t, withOpts(t, Options{}, "[paths]\ndir = \"~/todo\"\n"), h)
+		cfg := loadWith(t, withOpts(t, Options{}, `{"dir":"~/todo"}`), h)
 		for name, got := range map[string]string{
 			"TodoFile":   cfg.TodoFile,
 			"DoneFile":   cfg.DoneFile,
@@ -436,38 +440,12 @@ report_file = "a$HOME/b"
 	})
 }
 
-// TestTOMLFullSchema decodes every key of the §5.2 schema at once.
-func TestTOMLFullSchema(t *testing.T) {
+// TestJSONFullSchema decodes every key of the §5.2 schema at once.
+func TestJSONFullSchema(t *testing.T) {
 	h := home(t)
-	body := `
-[paths]
-dir = "~/todo"
-todo_file = "~/todo/todo.txt"
-done_file = "~/todo/done.txt"
-report_file = "~/todo/report.txt"
-
-[behavior]
-force = true
-preserve_line_numbers = false
-auto_archive = false
-date_on_add = true
-priority_on_add = "B"
-verbose = 2
-default_action = "list"
-sourcevar = "~/done.txt"
-sentence_delimiters = ".;"
-
-[colors]
-pri_a = "yellow"
-pri_b = "\\033[0;32m"
-color_project = "light_cyan"
-color_meta = ""
-
-[colors.map]
-yellow = "\\033[1;43m"
-`
-	path := writeConfig(t, filepath.Join(t.TempDir(), "config.toml"), body)
-	cfg := loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "nonexistent", "config.toml"))
+	body := `{"dir":"~/todo","files":{"todo":"~/todo/todo.txt","done":"~/todo/done.txt","report":"~/todo/report.txt"},"behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"~/done.txt","sentenceDelimiters":".;"},"colors":{"priA":"yellow","priB":"\\033[0;32m","colorProject":"light_cyan","colorMeta":"","map":{"yellow":"\\033[1;43m"}}}`
+	path := writeConfig(t, filepath.Join(t.TempDir(), "config.json"), body)
+	cfg := loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "nonexistent", "config.json"))
 
 	if cfg.ConfigPath != path {
 		t.Errorf("ConfigPath = %q, want %q", cfg.ConfigPath, path)
@@ -513,7 +491,7 @@ yellow = "\\033[1;43m"
 	}
 }
 
-// TestColorResolution covers [colors] values: map names (case-insensitive),
+// TestColorResolution covers colors values: map names (case-insensitive),
 // raw ANSI strings with \033 translated, empty = off, and unknown names
 // passed through verbatim.
 func TestColorResolution(t *testing.T) {
@@ -525,15 +503,15 @@ func TestColorResolution(t *testing.T) {
 		role string
 		want string
 	}{
-		{"map name", "[colors]\npri_a = \"yellow\"\n", "pri_a", "\x1b[1;33m"},
-		{"map name case-insensitive", "[colors]\npri_a = \"YELLOW\"\n", "pri_a", "\x1b[1;33m"},
-		{"raw ansi", "[colors]\npri_b = \"\\\\033[0;32m\"\n", "pri_b", "\x1b[0;32m"},
-		{"empty is off", "[colors]\npri_c = \"\"\n", "pri_c", ""},
-		{"unknown name is raw", "[colors]\npri_d = \"blink\"\n", "pri_d", "blink"},
-		{"magenta aliases purple", "[colors]\npri_a = \"magenta\"\n", "pri_a", "\x1b[0;35m"},
-		{"map override", "[colors]\npri_a = \"yellow\"\n[colors.map]\nyellow = \"\\\\033[1;43m\"\n", "pri_a", "\x1b[1;43m"},
-		{"map key case-insensitive", "[colors]\npri_a = \"yellow\"\n[colors.map]\nYELLOW = \"\\\\033[1;43m\"\n", "pri_a", "\x1b[1;43m"},
-		{"map names stay resolvable after override", "[colors]\npri_a = \"red\"\n[colors.map]\nyellow = \"\\\\033[1;43m\"\n", "pri_a", "\x1b[0;31m"},
+		{"map name", `{"colors":{"priA":"yellow"}}`, "pri_a", "\x1b[1;33m"},
+		{"map name case-insensitive", `{"colors":{"priA":"YELLOW"}}`, "pri_a", "\x1b[1;33m"},
+		{"raw ansi", `{"colors":{"priB":"\\033[0;32m"}}`, "pri_b", "\x1b[0;32m"},
+		{"empty is off", `{"colors":{"priC":""}}`, "pri_c", ""},
+		{"unknown name is raw", `{"colors":{"priD":"blink"}}`, "pri_d", "blink"},
+		{"magenta aliases purple", `{"colors":{"priA":"magenta"}}`, "pri_a", "\x1b[0;35m"},
+		{"map override", `{"colors":{"priA":"yellow","map":{"yellow":"\\033[1;43m"}}}`, "pri_a", "\x1b[1;43m"},
+		{"map key case-insensitive", `{"colors":{"priA":"yellow","map":{"YELLOW":"\\033[1;43m"}}}`, "pri_a", "\x1b[1;43m"},
+		{"map names stay resolvable after override", `{"colors":{"priA":"red","map":{"yellow":"\\033[1;43m"}}}`, "pri_a", "\x1b[0;31m"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -560,7 +538,7 @@ func TestPriorityColorFallback(t *testing.T) {
 		t.Errorf("PriorityColor(Z) = %q, want pri_x %q", got, "\x1b[1;37m")
 	}
 
-	cfg = loadWith(t, withOpts(t, Options{}, "[colors]\npri_d = \"cyan\"\n"), h)
+	cfg = loadWith(t, withOpts(t, Options{}, `{"colors":{"priD":"cyan"}}`), h)
 	if got := cfg.PriorityColor('D'); got != "\x1b[0;36m" {
 		t.Errorf("PriorityColor(D) = %q, want %q", got, "\x1b[0;36m")
 	}
@@ -569,7 +547,7 @@ func TestPriorityColorFallback(t *testing.T) {
 // TestPlainColors pins plain mode: every color resolves to "".
 func TestPlainColors(t *testing.T) {
 	h := home(t)
-	body := "[colors]\npri_a = \"yellow\"\ncolor_project = \"red\"\n"
+	body := `{"colors":{"priA":"yellow","colorProject":"red"}}`
 
 	t.Run("flag", func(t *testing.T) {
 		cfg := loadWith(t, withOpts(t, Options{Plain: true, PlainSet: true}, body), h)
@@ -633,11 +611,11 @@ func TestBuiltinColorMap(t *testing.T) {
 	}
 }
 
-// TestInvalidTOML: a malformed file is an error, not silent defaults.
-func TestInvalidTOML(t *testing.T) {
+// TestInvalidJSON: a malformed file is an error, not silent defaults.
+func TestInvalidJSON(t *testing.T) {
 	h := home(t)
-	opts := withOpts(t, Options{}, "[paths\nbroken =")
-	if _, err := load(opts, h, filepath.Join(t.TempDir(), "nonexistent", "config.toml")); err == nil {
-		t.Error("load accepted malformed TOML")
+	opts := withOpts(t, Options{}, `{"dir":`)
+	if _, err := load(opts, h, filepath.Join(t.TempDir(), "nonexistent", "config.json")); err == nil {
+		t.Error("load accepted malformed JSON")
 	}
 }

@@ -1,5 +1,5 @@
 # Port of t1330-ls-highlighting.sh: list highlighting, all sessions in
-# scope. The custom color sessions use TOML configs (todo.sh's cfg
+# scope. The custom color sessions use JSON configs (todo.sh's cfg
 # exports).
 
 # default highlighting
@@ -8,15 +8,15 @@ exec gtdo ls
 cmpenv stdout hl1.want
 
 # customized highlighting: colors can be arbitrary strings
-exec gtdo -d custom.toml ls
+exec gtdo -d custom.json ls
 cmp stdout hl2.want
 
 # additional highlighting pri E+Z
-exec gtdo -d additional.toml ls
+exec gtdo -d additional.json ls
 cmpenv stdout hl3.want
 
 # different highlighting for pri X
-exec gtdo -d prix.toml ls
+exec gtdo -d prix.json ls
 cmpenv stdout hl4.want
 
 # highlighting of done (but not yet archived) tasks
@@ -43,22 +43,12 @@ cp pripos.txt todo.txt
 exec gtdo ls
 cmpenv stdout hl10.want
 
--- custom.toml --
-[colors]
-pri_a = "${color yellow}"
-pri_b = "${color green}"
-pri_c = "${color LightBlue}"
-pri_x = "${color white}"
-
-[colors.map]
-default = "${color}"
--- additional.toml --
-[colors]
-pri_e = "brown"
-pri_z = "light_purple"
--- prix.toml --
-[colors]
-pri_x = "brown"
+-- custom.json --
+{"colors":{"priA":"${color yellow}","priB":"${color green}","priC":"${color LightBlue}","priX":"${color white}","map":{"default":"${color}"}}}
+-- additional.json --
+{"colors":{"priE":"brown","priZ":"light_purple"}}
+-- prix.json --
+{"colors":{"priX":"brown"}}
 -- pri8.txt --
 (A) @con01 +prj01 -- Some project 01 task, pri A
 (B) @con02 +prj02 -- Some project 02 task, pri B
