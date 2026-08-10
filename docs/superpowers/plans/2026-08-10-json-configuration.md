@@ -31,7 +31,7 @@
 - Create `internal/config/json_test.go` — focused strict-decoder tests.
 - Modify config-using CLI/UI tests and `scripts/parity.sh` — replace TOML fixtures with JSON without changing expected behavior.
 - Modify live docs (`README.md`, `AGENTS.md`, `CHANGELOG.md`, `man/gtdo.1.tmpl`, generated `man/gtdo.1`) — publish the breaking format contract.
-- Modify normative specs/plans that still prescribe TOML — keep future work consistent with the new schema.
+- Modify the original migration design and bilingual plans — keep the repository's baseline contract consistent with the new schema.
 
 ---
 
@@ -573,19 +573,16 @@
   git commit -m "docs: publish json configuration contract"
   ```
 
-### Task 3: Align normative specs and plans, then verify the repository
+### Task 3: Align the baseline migration docs, then verify the repository
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-08-07-gtdo-migracion-todotxt-cli-design.md`
 - Modify: `docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.en.md`
 - Modify: `docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.md`
-- Modify: `docs/superpowers/specs/2026-08-10-allowed-contexts-projects-design.md`
-- Modify: `docs/superpowers/plans/2026-08-10-allowed-contexts-projects.md`
-- Modify: `docs/superpowers/specs/2026-08-10-task-format-design.md`
 
 **Interfaces:**
 - Consumes: the approved JSON design and implemented schema from Task 1.
-- Produces: normative future-work documents that reference `json.go`, `behaviour`, camelCase keys, JSON arrays, and `encoding/json` consistently.
+- Produces: baseline migration documents that reference `json.go`, `behaviour`, camelCase keys, and `encoding/json` consistently.
 
 - [ ] **Step 1: Update the original migration design and bilingual plans**
 
@@ -600,36 +597,7 @@
 
   Convert schema code fences to `json` and use the approved `dir`, `files`, `behaviour`, and `colors` shape. Replace BurntSushi references with standard-library `encoding/json`, and replace `internal/config/toml.go` task references with `internal/config/json.go` plus `internal/config/loader.go`.
 
-- [ ] **Step 2: Update the allowed-context/project spec and implementation plan**
-
-  Preserve that feature's nil-versus-empty list semantics while translating its on-disk shape to:
-
-  ```json
-  {
-    "behaviour": {
-      "allowedContexts": ["@home", "@work"],
-      "allowedProjects": ["+gtdo"]
-    }
-  }
-  ```
-
-  Its plan must target `behaviourJSON.AllowedContexts []string` with `json:"allowedContexts"` and `behaviourJSON.AllowedProjects []string` with `json:"allowedProjects"`, modify `internal/config/json.go`, and run JSON-named tests. Remove TOML-only wording and the BurntSushi dependency from its header.
-
-- [ ] **Step 3: Update the task-format design**
-
-  Translate its configuration example and contract to:
-
-  ```json
-  {
-    "behaviour": {
-      "taskFormat": "{priority} {creationDate} {description}"
-    }
-  }
-  ```
-
-  Replace `task_format`, `[behavior]`, TOML schema, and TOML-loaded test wording with `taskFormat`, `behaviour`, JSON schema, and JSON-loaded wording. Preserve the feature's task-format semantics unchanged.
-
-- [ ] **Step 4: Scan normative documents for stale format instructions**
+- [ ] **Step 2: Scan the baseline migration documents for stale format instructions**
 
   Run:
 
@@ -637,27 +605,21 @@
   rg -n -i 'toml|config\.toml|BurntSushi|\[behavior\]|\[paths\]|\[colors\]' \
     docs/superpowers/specs/2026-08-07-gtdo-migracion-todotxt-cli-design.md \
     docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.en.md \
-    docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.md \
-    docs/superpowers/specs/2026-08-10-allowed-contexts-projects-design.md \
-    docs/superpowers/plans/2026-08-10-allowed-contexts-projects.md \
-    docs/superpowers/specs/2026-08-10-task-format-design.md
+    docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.md
   ```
 
   Expected: no matches. Do not rewrite `docs/superpowers/specs/2026-08-10-json-config-design.md` or this implementation plan merely because they describe removal of TOML.
 
-- [ ] **Step 5: Commit the normative documentation migration**
+- [ ] **Step 3: Commit the baseline documentation migration**
 
   ```bash
   git add docs/superpowers/specs/2026-08-07-gtdo-migracion-todotxt-cli-design.md \
     docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.en.md \
-    docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.md \
-    docs/superpowers/specs/2026-08-10-allowed-contexts-projects-design.md \
-    docs/superpowers/plans/2026-08-10-allowed-contexts-projects.md \
-    docs/superpowers/specs/2026-08-10-task-format-design.md
+    docs/superpowers/plans/2026-08-07-gtdo-migracion-todotxt-cli.md
   git commit -m "docs: align plans with json configuration"
   ```
 
-- [ ] **Step 6: Run final formatting, build, tests, vet, man, and stale-reference checks**
+- [ ] **Step 4: Run final formatting, build, tests, vet, man, and stale-reference checks**
 
   Run: `gofmt -w internal/config/*.go internal/cli/list.go internal/cli/multiline_test.go internal/cli/preparse_test.go internal/cli/script_test.go internal/ui/color.go internal/ui/color_test.go man/man_test.go`
 
