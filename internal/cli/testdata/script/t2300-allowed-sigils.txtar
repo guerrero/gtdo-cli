@@ -1,0 +1,49 @@
+exec gtdo -p -d config.toml list
+stdout '1 existing @work [+]gtdo'
+stdout '2 legacy @old [+]old'
+
+cp todo.txt before-context.txt
+! exec gtdo -d config.toml add 'bad @home'
+cmpenv stderr context.want
+! stdout .
+cmp todo.txt before-context.txt
+
+exec gtdo -d config.toml add 'good @work +gtdo'
+cp todo.txt before-append.txt
+! exec gtdo -d config.toml append 1 '+other'
+cmpenv stderr append.want
+! stdout .
+cmp todo.txt before-append.txt
+
+! exec gtdo -d config.toml addto inbox.txt 'new +other'
+cmpenv stderr addto.want
+! stdout .
+cmp inbox.txt empty.txt
+
+cp todo.txt before-batch.txt
+! exec bash -c 'gtdo -d config.toml addm $''batch @work\nbatch +other'''
+cmpenv stderr batch.want
+! stdout .
+cmp todo.txt before-batch.txt
+
+-- config.toml --
+[paths]
+dir = "$HOME"
+
+[behavior]
+allowed_contexts = ["@work"]
+allowed_projects = ["+gtdo"]
+
+-- todo.txt --
+existing @work +gtdo
+legacy @old +old
+-- empty.txt --
+-- inbox.txt --
+-- context.want --
+TODO: Context "@home" is not allowed in $HOME/todo.txt at line 3.
+-- append.want --
+TODO: Project "+other" is not allowed in $HOME/todo.txt at line 1.
+-- addto.want --
+TODO: Project "+other" is not allowed in $HOME/inbox.txt at line 1.
+-- batch.want --
+TODO: Project "+other" is not allowed in $HOME/todo.txt at line 5.

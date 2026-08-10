@@ -97,6 +97,41 @@ Displays version and build information
 .TP
 .B \-x
 No-op; accepted for compatibility with todo.txt-cli
+.SH CONFIGURATION
+gtdo reads configuration from TOML files.  The following keys are TOML-only;
+they have no environment-variable or command-line equivalents.
+Place both keys in the TOML
+.B [behavior]
+table.
+.TP
+.B allowed_contexts
+An array of complete context tokens, such as
+.BR @work
+and
+.BR @home .
+When this key is omitted, contexts are unrestricted.  An explicit empty array
+rejects every context tag.  Matching is exact and case-sensitive.
+.TP
+.B allowed_projects
+An array of complete project tokens, such as
+.BR +gtdo
+and
+.BR +personal .
+When this key is omitted, projects are unrestricted.  An explicit empty array
+rejects every project tag.  Matching is exact and case-sensitive.
+.PP
+gtdo validates final task text for
+.BR add ,
+.BR addm ,
+.BR addto ,
+.BR append ,
+.BR prepend ,
+and
+.BR replace .
+Listing remains usable for legacy tasks with tags that are not allowed.
+On rejection, the diagnostic includes the file and 1-based line number, for
+example:
+.BR "TODO: Context \"@home\" is not allowed in /path/to/todo.txt at line 3."
 .SH ENVIRONMENT
 .TP
 .B TODO_DIR

@@ -32,6 +32,32 @@ func TestAddAppends(t *testing.T) {
 	}
 }
 
+func TestAddRejectsWithoutWriting(t *testing.T) {
+	s := newTestStore(t, "existing @work +gtdo\n")
+	s.Policy = SigilPolicy{AllowedContexts: []string{"@work"}, AllowedProjects: []string{"+gtdo"}}
+	before := readFile(t, s.TodoFile)
+
+	_, _, err := s.Add("new @home", false, "", fixedNow)
+	if err == nil || err.Error() != `TODO: Context "@home" is not allowed in `+s.TodoFile+` at line 2.` {
+		t.Fatalf("Add error = %v", err)
+	}
+	if got := readFile(t, s.TodoFile); got != before {
+		t.Fatalf("todo.txt changed after rejected Add: %q", got)
+	}
+}
+
+func TestPolicyRunsAfterAddTransform(t *testing.T) {
+	s := newTestStore(t, "")
+	s.Policy = SigilPolicy{AllowedProjects: []string{"+gtdo"}}
+	_, text, err := s.Add("+gtdo", true, "A", fixedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text != "(A) 2009-02-13 +gtdo" {
+		t.Fatalf("Add text = %q", text)
+	}
+}
+
 // Spaces are preserved verbatim: cleaninput only maps CR/LF to spaces, it
 // does not trim (verified against the real todo.sh).
 func TestAddPreservesSpaces(t *testing.T) {
@@ -201,6 +227,20 @@ func TestAddmEmpty(t *testing.T) {
 	}
 }
 
+func TestAddmRejectsBeforeAnyWrite(t *testing.T) {
+	s := newTestStore(t, "existing @work +gtdo\n")
+	s.Policy = SigilPolicy{AllowedContexts: []string{"@work"}, AllowedProjects: []string{"+gtdo"}}
+	before := readFile(t, s.TodoFile)
+
+	_, err := s.Addm("batch @work\nbatch @home", false, "", fixedNow)
+	if err == nil || err.Error() != `TODO: Context "@home" is not allowed in `+s.TodoFile+` at line 3.` {
+		t.Fatalf("Addm error = %v", err)
+	}
+	if got := readFile(t, s.TodoFile); got != before {
+		t.Fatalf("todo.txt changed after rejected Addm: %q", got)
+	}
+}
+
 func TestAddto(t *testing.T) {
 	s := newTestStore(t, "")
 	garden := filepath.Join(s.Dir, "garden.txt")
@@ -214,6 +254,22 @@ func TestAddto(t *testing.T) {
 	}
 	if got := readFile(t, garden); got != "notice the daisies\n" {
 		t.Errorf("garden.txt = %q", got)
+	}
+}
+
+func TestAddtoRejectsWithDestinationPath(t *testing.T) {
+	s := newTestStore(t, "")
+	dest := filepath.Join(s.Dir, "inbox.txt")
+	writeFile(t, dest, "existing\n")
+	s.Policy = SigilPolicy{AllowedProjects: []string{"+gtdo"}}
+
+	_, _, err := s.Addto("inbox.txt", "new +other", false, "", fixedNow)
+	want := `TODO: Project "+other" is not allowed in ` + dest + ` at line 2.`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Addto error = %v, want %q", err, want)
+	}
+	if got := readFile(t, dest); got != "existing\n" {
+		t.Fatalf("destination changed after rejected Addto: %q", got)
 	}
 }
 
@@ -485,6 +541,40 @@ func TestReplaceNoTask(t *testing.T) {
 	s := newTestStore(t, "one\n")
 	if _, _, err := s.Replace(9, "x"); err == nil || err.Error() != "TODO: No task 9." {
 		t.Errorf("Replace(9) error = %v, want TODO: No task 9.", err)
+	}
+}
+
+func TestTextMutationsRejectFinalCandidate(t *testing.T) {
+	cases := []struct {
+		name string
+		run  func(*Store) error
+	}{
+		{"append", func(s *Store) error { _, err := s.Append(1, "+bad"); return err }},
+		{"prepend", func(s *Store) error { _, err := s.Prepend(1, "+bad"); return err }},
+		{"replace", func(s *Store) error { _, _, err := s.Replace(1, "+bad"); return err }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestStore(t, "(A) 2009-02-13 existing +gtdo\n")
+			s.Policy = SigilPolicy{AllowedProjects: []string{"+gtdo"}}
+			before := readFile(t, s.TodoFile)
+			err := tc.run(s)
+			want := `TODO: Project "+bad" is not allowed in ` + s.TodoFile + ` at line 1.`
+			if err == nil || err.Error() != want {
+				t.Fatalf("error = %v, want %q", err, want)
+			}
+			if got := readFile(t, s.TodoFile); got != before {
+				t.Fatalf("file changed after rejected %s: %q", tc.name, got)
+			}
+		})
+	}
+}
+
+func TestMetadataMutationKeepsLegacyTagsUsable(t *testing.T) {
+	s := newTestStore(t, "legacy +old @old\n")
+	s.Policy = SigilPolicy{AllowedContexts: []string{"@new"}, AllowedProjects: []string{"+new"}}
+	if _, err := s.Pri(1, 'A'); err != nil {
+		t.Fatalf("Pri rejected legacy tag: %v", err)
 	}
 }
 
