@@ -30,7 +30,7 @@ stderr '^TODO: No action "bogus" exists\.$'
 stderr '^TODO: No action "--help" exists\.$'
 
 -- help.want --
-  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+  Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 
   Options:
     -@
@@ -57,10 +57,6 @@ stderr '^TODO: No action "--help" exists\.$'
         Don't preserve line numbers; automatically remove blank lines on task deletion
     -N
         Preserve line numbers
-    -t
-        Prepend the current date to a task automatically when it's added.
-    -T
-        Do not prepend the current date to a task automatically when it's added.
     -v
         Verbose mode turns on confirmation messages
     -vv

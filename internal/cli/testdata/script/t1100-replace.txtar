@@ -60,10 +60,8 @@ cmp stdout r11.want
 exec gtdo list
 cmp stdout rlist2.want
 
-# replace handling prepended date on add
-rm todo.txt
-exec gtdo -t add 'new task'
-cmp stdout r13.want
+# replace handling a legacy date prefix
+cp date-seed.txt todo.txt
 
 exec gtdo replace 1 this is just a new one
 cmp stdout r14.want
@@ -71,24 +69,21 @@ cmp stdout r14.want
 exec gtdo replace 1 2010-07-04 this also has a new date
 cmp stdout r15.want
 
-# replace handling prepended priority on add
-rm todo.txt
-exec gtdo -t add 'new task'
+# replace handling a legacy date prefix with a new priority
+cp date-seed.txt todo.txt
 exec gtdo replace 1 '(B) this also has a priority now'
 cmp stdout r16.want
 
-# replace handling priority and prepended date on add
-rm todo.txt
-exec gtdo -t add 'new task'
+# replace handling priority and a legacy date prefix
+cp date-seed.txt todo.txt
 exec gtdo pri 1 A
 cmp stdout r17.want
 
 exec gtdo replace 1 this is just a new one
 cmp stdout r18.want
 
-# replace handling prepended priority and date on add
-rm todo.txt
-exec gtdo -t add 'new task'
+# replace handling prepended priority and legacy date prefix
+cp date-seed.txt todo.txt
 exec gtdo replace 1 '(C) 2010-07-04 this also has a priority and new date'
 cmp stdout r19.want
 
@@ -131,6 +126,8 @@ chase the chickens
 jump on hay
 -- dateonly.txt --
 2009-02-13 this is just a new one
+-- date-seed.txt --
+2009-02-13 new task
 -- r1.want --
 1 notice the daisies
 TODO: Replaced task with:
@@ -190,9 +187,6 @@ TODO: 1 of 1 tasks shown
 1 ~@#$%^&*()-_=+[{]}|;:',<.>/?
 --
 TODO: 4 of 4 tasks shown
--- r13.want --
-1 2009-02-13 new task
-TODO: 1 added.
 -- r14.want --
 1 2009-02-13 new task
 TODO: Replaced task with:

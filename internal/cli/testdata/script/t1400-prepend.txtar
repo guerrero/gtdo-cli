@@ -34,22 +34,19 @@ cmp stdout p6.want
 exec gtdo list
 cmp stdout prelist3.want
 
-# prepend handling prepended date on add
-rm todo.txt
-exec gtdo -t add 'new task'
+# prepend handling a legacy date prefix
+cp date-seed.txt todo.txt
 exec gtdo prepend 1 'this is just a'
 cmp stdout p7.want
 
-# prepend handling priority and prepended date on add
-rm todo.txt
-exec gtdo -t add 'new task'
+# prepend handling priority and a legacy date prefix
+cp date-seed.txt todo.txt
 exec gtdo pri 1 A
 exec gtdo prepend 1 'this is just a'
 cmp stdout p8.want
 
-# prepend with prepended date keeps both
-rm todo.txt
-exec gtdo -t add 'new task'
+# prepend with a legacy date prefix keeps both
+cp date-seed.txt todo.txt
 exec gtdo prepend 1 '2010-07-04 this is just a'
 cmp stdout p9.want
 
@@ -66,6 +63,8 @@ thrash some hay
 chase the chickens
 -- hay.txt --
 jump on hay
+-- date-seed.txt --
+2009-02-13 new task
 -- p1.want --
 2 test notice the sunflowers
 -- p2.want --

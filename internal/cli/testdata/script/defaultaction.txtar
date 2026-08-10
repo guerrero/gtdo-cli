@@ -5,12 +5,12 @@ cmp stdout shorthelp.want
 
 # An explicit action wins over the default.
 ! exec gtdo bogus
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 # An unknown default action is a usage error like any unknown action.
 env TODOTXT_DEFAULT_ACTION=bogus
 ! exec gtdo
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 # -V short-circuits before config resolution, so a bad default action
 # does not matter.
@@ -18,7 +18,7 @@ exec gtdo -V
 stdout '^gtdo dev'
 
 -- shorthelp.want --
-  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+  Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 
   Actions:
     add  Add a TODO item to todo.txt.

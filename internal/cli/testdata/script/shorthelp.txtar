@@ -12,7 +12,7 @@ exec gtdo -h -d config.toml bogus
 cmp stdout shorthelp.want
 
 -- shorthelp.want --
-  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+  Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 
   Actions:
     add  Add a TODO item to todo.txt.

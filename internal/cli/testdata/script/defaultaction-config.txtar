@@ -4,14 +4,14 @@ cmp stdout shorthelp.want
 
 # The explicit action still wins over the configured default.
 ! exec gtdo -d default-action.toml bogus
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 -- default-action.toml --
 [behavior]
 default_action = "shorthelp"
 
 -- shorthelp.want --
-  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+  Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 
   Actions:
     add  Add a TODO item to todo.txt.

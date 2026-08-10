@@ -13,11 +13,11 @@
 # `set -- '-h' 'shorthelp'` (pinned in shorthelp.txtar).
 
 exec gtdo -h
-stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Usage: gtdo \[-fhpanvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
 stdout '^  Actions:$'
 stdout '^  See "help" for more details\.$'
 
 exec gtdo shorthelp
-stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Usage: gtdo \[-fhpanvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
 stdout '^  Actions:$'
 stdout '^  See "help" for more details\.$'

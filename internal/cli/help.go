@@ -46,10 +46,6 @@ const optionsHelp = `  Options:
         Don't preserve line numbers; automatically remove blank lines on task deletion
     -N
         Preserve line numbers
-    -t
-        Prepend the current date to a task automatically when it's added.
-    -T
-        Do not prepend the current date to a task automatically when it's added.
     -v
         Verbose mode turns on confirmation messages
     -vv
@@ -77,7 +73,6 @@ const envVarsHelp = `  Environment variables:
     TODOTXT_FORCE=1                  is same as option -f
     TODOTXT_PRESERVE_LINE_NUMBERS    is same as option -n (0)/-N (1)
     TODOTXT_PLAIN                    is same as option -p (1)/-c (0)
-    TODOTXT_DATE_ON_ADD              is same as option -t (1)/-T (0)
     TODOTXT_PRIORITY_ON_ADD=pri      default priority A-Z
     TODOTXT_VERBOSE=1                is same as option -v
     TODOTXT_DEFAULT_ACTION=""        run this when called with no arguments

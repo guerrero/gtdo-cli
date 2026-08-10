@@ -1,0 +1,43 @@
+# Port of the addto session with opt-in timestamp IDs. IDs use a separate
+# destination collision domain and remain visible in the raw garden file.
+
+cp empty.txt garden.txt
+
+env GTDO_TEST_NOW=2009-02-13T04:40:00.120Z
+exec gtdo -d uuid.toml addto garden.txt notice the daisies
+cmp stdout d1.want
+
+exec gtdo -d uuid.toml addto garden.txt smell the roses
+cmp stdout d2.want
+
+env GTDO_TEST_NOW=2009-02-13T04:40:59.990Z
+exec gtdo -d uuid.toml addto garden.txt last second
+cmp stdout d3.want
+
+exec gtdo -d uuid.toml addto garden.txt next second
+cmp stdout d4.want
+
+exec cat garden.txt
+cmp stdout dfile.want
+
+-- uuid.toml --
+[behavior]
+enable_uuid = true
+-- d1.want --
+1 20090213T044000.12Z notice the daisies
+GARDEN: 1 added.
+-- d2.want --
+2 20090213T044000.13Z smell the roses
+GARDEN: 2 added.
+-- d3.want --
+3 20090213T044059.99Z last second
+GARDEN: 3 added.
+-- d4.want --
+4 20090213T044100.00Z next second
+GARDEN: 4 added.
+-- dfile.want --
+20090213T044000.12Z notice the daisies
+20090213T044000.13Z smell the roses
+20090213T044059.99Z last second
+20090213T044100.00Z next second
+-- empty.txt --
