@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Mutations (§6.3), each pinned against the real todo.sh: file state and
@@ -13,14 +14,14 @@ import (
 
 func TestAddAppends(t *testing.T) {
 	s := newTestStore(t, "")
-	line, text, err := s.Add("notice the daisies", false, "", fixedNow)
+	line, text, err := s.Add("notice the daisies", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if line != 1 || text != "notice the daisies" {
 		t.Errorf("Add = (%d, %q), want (1, %q)", line, text, "notice the daisies")
 	}
-	line, text, err = s.Add("smell the roses", false, "", fixedNow)
+	line, text, err = s.Add("smell the roses", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +37,7 @@ func TestAddAppends(t *testing.T) {
 // does not trim (verified against the real todo.sh).
 func TestAddPreservesSpaces(t *testing.T) {
 	s := newTestStore(t, "")
-	_, text, err := s.Add("  padded  ", false, "", fixedNow)
+	_, text, err := s.Add("  padded  ", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,7 @@ func TestAddPreservesSpaces(t *testing.T) {
 // (todo.sh cleaninput; t1000 'add with CR', t2000).
 func TestAddSquashesCRLF(t *testing.T) {
 	s := newTestStore(t, "")
-	_, text, err := s.Add("smell the\rCarriage Return", false, "", fixedNow)
+	_, text, err := s.Add("smell the\rCarriage Return", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +63,7 @@ func TestAddSquashesCRLF(t *testing.T) {
 // t1010).
 func TestAddUppercasesPriority(t *testing.T) {
 	s := newTestStore(t, "")
-	_, text, err := s.Add("(b) notice the daisies", false, "", fixedNow)
+	_, text, err := s.Add("(b) notice the daisies", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,32 +72,9 @@ func TestAddUppercasesPriority(t *testing.T) {
 	}
 }
 
-func TestAddDateOnAdd(t *testing.T) {
-	s := newTestStore(t, "")
-	_, text, err := s.Add("notice the daisies", true, "", fixedNow)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if text != "2009-02-13 notice the daisies" {
-		t.Errorf("Add = %q, want %q", text, "2009-02-13 notice the daisies")
-	}
-}
-
-// The date goes after an existing priority: `(A) 2009-02-13 task` (t1010).
-func TestAddDateAfterPriority(t *testing.T) {
-	s := newTestStore(t, "")
-	_, text, err := s.Add("(A) notice the daisies", true, "", fixedNow)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if text != "(A) 2009-02-13 notice the daisies" {
-		t.Errorf("Add = %q, want %q", text, "(A) 2009-02-13 notice the daisies")
-	}
-}
-
 func TestAddPriorityOnAdd(t *testing.T) {
 	s := newTestStore(t, "")
-	_, text, err := s.Add("take out the trash", false, "A", fixedNow)
+	_, text, err := s.Add("take out the trash", "A", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +86,7 @@ func TestAddPriorityOnAdd(t *testing.T) {
 // priority_on_add is skipped when the task already carries a priority.
 func TestAddPriorityOnAddKeepsExisting(t *testing.T) {
 	s := newTestStore(t, "")
-	_, text, err := s.Add("(B) take out the trash", false, "A", fixedNow)
+	_, text, err := s.Add("(B) take out the trash", "A", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,15 +95,107 @@ func TestAddPriorityOnAddKeepsExisting(t *testing.T) {
 	}
 }
 
-// date_on_add and priority_on_add combine: priority first, then date.
-func TestAddDateAndPriorityOnAdd(t *testing.T) {
+func TestAddUUID(t *testing.T) {
 	s := newTestStore(t, "")
-	_, text, err := s.Add("take out the trash", true, "A", fixedNow)
+	s.EnableUUID = true
+	line, text, err := s.Add("(b) notice the daisies", "", fixedNow.Add(120*time.Millisecond))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if text != "(A) 2009-02-13 take out the trash" {
-		t.Errorf("Add = %q, want %q", text, "(A) 2009-02-13 take out the trash")
+	want := "(B) 20090213T044000.12Z notice the daisies"
+	if line != 1 || text != want {
+		t.Errorf("Add = (%d, %q), want (1, %q)", line, text, want)
+	}
+	if got := readFile(t, s.TodoFile); got != want+"\n" {
+		t.Errorf("todo.txt = %q, want %q", got, want+"\n")
+	}
+}
+
+func TestAddUUIDPriorityOnAdd(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	_, text, err := s.Add("notice the daisies", "A", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "(A) 20090213T044000.12Z notice the daisies"
+	if text != want {
+		t.Errorf("Add = %q, want %q", text, want)
+	}
+}
+
+func TestAddUUIDDoneMarker(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	_, text, err := s.Add("x notice the daisies", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "x 20090213T044000.12Z notice the daisies"
+	if text != want {
+		t.Errorf("Add = %q, want %q", text, want)
+	}
+}
+
+func TestAddUUIDSkipsExistingDestinationID(t *testing.T) {
+	const existing = "20090213T044000.12Z"
+	s := newTestStore(t, existing+" old task\n")
+	s.EnableUUID = true
+	_, text, err := s.Add("new task", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "20090213T044000.13Z new task"
+	if text != want {
+		t.Errorf("Add = %q, want %q", text, want)
+	}
+}
+
+func TestAddUUIDKeepsExplicitID(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	const explicit = "20090213T044000.99Z"
+	_, text, err := s.Add(explicit+" imported task", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := explicit + " imported task"
+	if text != want {
+		t.Errorf("Add = %q, want %q", text, want)
+	}
+}
+
+func TestAddmUUIDSequence(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	res, err := s.Addm("eat apples\neat oranges\ndrink milk", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AddResult{
+		{LineNumber: 1, Text: "20090213T044000.12Z eat apples"},
+		{LineNumber: 2, Text: "20090213T044000.13Z eat oranges"},
+		{LineNumber: 3, Text: "20090213T044000.14Z drink milk"},
+	}
+	if !reflect.DeepEqual(res, want) {
+		t.Errorf("Addm = %+v, want %+v", res, want)
+	}
+}
+
+func TestAddmUUIDRollover(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	now := time.Date(2009, 2, 13, 4, 40, 59, 999_000_000, time.UTC)
+	res, err := s.Addm("last second\nnext second", "", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AddResult{
+		{LineNumber: 1, Text: "20090213T044059.99Z last second"},
+		{LineNumber: 2, Text: "20090213T044100.00Z next second"},
+	}
+	if !reflect.DeepEqual(res, want) {
+		t.Errorf("Addm = %+v, want %+v", res, want)
 	}
 }
 
@@ -134,7 +204,7 @@ func TestAddDateAndPriorityOnAdd(t *testing.T) {
 func TestAddToFileWithoutEOL(t *testing.T) {
 	s := newTestStore(t, "")
 	writeFile(t, s.TodoFile, "this is a first task without newline")
-	line, _, err := s.Add("a second task", false, "", fixedNow)
+	line, _, err := s.Add("a second task", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +220,7 @@ func TestAddToFileWithoutEOL(t *testing.T) {
 // count grows; the listing drops it).
 func TestAddEmpty(t *testing.T) {
 	s := newTestStore(t, "one\n")
-	line, text, err := s.Add("", false, "", fixedNow)
+	line, text, err := s.Add("", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +231,7 @@ func TestAddEmpty(t *testing.T) {
 
 func TestAddmSplitsLines(t *testing.T) {
 	s := newTestStore(t, "smell the cheese\n")
-	res, err := s.Addm("eat apples\neat oranges\ndrink milk", false, "", fixedNow)
+	res, err := s.Addm("eat apples\neat oranges\ndrink milk", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +251,7 @@ func TestAddmSplitsLines(t *testing.T) {
 // Bash word splitting drops empty fields, so empty lines add nothing.
 func TestAddmDropsEmptyLines(t *testing.T) {
 	s := newTestStore(t, "")
-	res, err := s.Addm("a\n\nb", false, "", fixedNow)
+	res, err := s.Addm("a\n\nb", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +262,7 @@ func TestAddmDropsEmptyLines(t *testing.T) {
 
 func TestAddmEmpty(t *testing.T) {
 	s := newTestStore(t, "")
-	res, err := s.Addm("", false, "", fixedNow)
+	res, err := s.Addm("", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +275,7 @@ func TestAddto(t *testing.T) {
 	s := newTestStore(t, "")
 	garden := filepath.Join(s.Dir, "garden.txt")
 	writeFile(t, garden, "")
-	line, text, err := s.Addto("garden.txt", "notice the daisies", false, "", fixedNow)
+	line, text, err := s.Addto("garden.txt", "notice the daisies", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,9 +287,27 @@ func TestAddto(t *testing.T) {
 	}
 }
 
+func TestAddtoUUID(t *testing.T) {
+	s := newTestStore(t, "")
+	s.EnableUUID = true
+	garden := filepath.Join(s.Dir, "garden.txt")
+	writeFile(t, garden, "existing garden task\n")
+	line, text, err := s.Addto("garden.txt", "notice the daisies", "", fixedNow.Add(120*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "20090213T044000.12Z notice the daisies"
+	if line != 2 || text != want {
+		t.Errorf("Addto = (%d, %q), want (2, %q)", line, text, want)
+	}
+	if got := readFile(t, garden); got != "existing garden task\n"+want+"\n" {
+		t.Errorf("garden.txt = %q", got)
+	}
+}
+
 func TestAddtoMissingDest(t *testing.T) {
 	s := newTestStore(t, "")
-	_, _, err := s.Addto("garden.txt", "notice the daisies", false, "", fixedNow)
+	_, _, err := s.Addto("garden.txt", "notice the daisies", "", fixedNow)
 	if err == nil {
 		t.Fatal("Addto to missing dest: want error")
 	}
@@ -708,7 +796,7 @@ func TestDelPreserve(t *testing.T) {
 	if got := readFile(t, s.TodoFile); got != "\n(A) notice the sunflowers\nstop\n" {
 		t.Errorf("todo.txt = %q", got)
 	}
-	line, _, err := s.Add("A new task", false, "", fixedNow)
+	line, _, err := s.Add("A new task", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -728,7 +816,7 @@ func TestDelPreserveSingleLine(t *testing.T) {
 	if got := readFile(t, s.TodoFile); got != "\n" {
 		t.Errorf("todo.txt = %q, want %q", got, "\n")
 	}
-	line, _, err := s.Add("two", false, "", fixedNow)
+	line, _, err := s.Add("two", "", fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1059,7 +1147,7 @@ func TestReportCountsChanged(t *testing.T) {
 	if _, _, err := s.Report(fixedNow); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := s.Add("two", false, "", fixedNow); err != nil {
+	if _, _, err := s.Add("two", "", fixedNow); err != nil {
 		t.Fatal(err)
 	}
 	line, updated, err := s.Report(fixedNow)

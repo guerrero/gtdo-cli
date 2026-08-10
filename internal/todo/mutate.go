@@ -21,8 +21,8 @@ import (
 )
 
 // AddResult is one add/addm/addto outcome: the new line number and the
-// final task text (after cleaning, priority uppercasing, and the
-// date_on_add/priority_on_add prefixes) — the pieces the CLI prints as
+// final task text (after cleaning, priority uppercasing, timestamp-ID, and
+// priority_on_add prefixes) — the pieces the CLI prints as
 // "N text" and "PREFIX: N added.".
 type AddResult struct {
 	LineNumber int
@@ -31,8 +31,12 @@ type AddResult struct {
 
 // Add appends text as a new task to TodoFile and returns its line number
 // and final text (§6.3 add).
-func (s *Store) Add(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (int, string, error) {
-	res, err := s.addTo(s.TodoFile, text, dateOnAdd, priorityOnAdd, now)
+func (s *Store) Add(text, priorityOnAdd string, now time.Time) (int, string, error) {
+	allocator, err := s.idAllocatorFor(s.TodoFile, now)
+	if err != nil {
+		return 0, "", err
+	}
+	res, err := s.addTo(s.TodoFile, text, priorityOnAdd, allocator)
 	if err != nil {
 		return 0, "", err
 	}
@@ -42,13 +46,17 @@ func (s *Store) Add(text string, dateOnAdd bool, priorityOnAdd string, now time.
 // Addm splits text on newlines and adds each non-empty line as its own
 // task, like `IFS=$'\n'; for line in $input` (t2000 'actual multiline
 // add').
-func (s *Store) Addm(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) ([]AddResult, error) {
+func (s *Store) Addm(text, priorityOnAdd string, now time.Time) ([]AddResult, error) {
+	allocator, err := s.idAllocatorFor(s.TodoFile, now)
+	if err != nil {
+		return nil, err
+	}
 	var results []AddResult
 	for _, line := range strings.Split(text, "\n") {
 		if line == "" {
 			continue
 		}
-		res, err := s.addTo(s.TodoFile, line, dateOnAdd, priorityOnAdd, now)
+		res, err := s.addTo(s.TodoFile, line, priorityOnAdd, allocator)
 		if err != nil {
 			return results, err
 		}
@@ -59,30 +67,48 @@ func (s *Store) Addm(text string, dateOnAdd bool, priorityOnAdd string, now time
 
 // Addto appends text to a file inside Dir; the destination must already
 // exist (§6.3 addto, t1020). dest is resolved relative to Dir.
-func (s *Store) Addto(dest, text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (int, string, error) {
+func (s *Store) Addto(dest, text, priorityOnAdd string, now time.Time) (int, string, error) {
 	path := filepath.Join(s.Dir, dest)
 	if !isRegular(path) {
 		// The exact todo.sh die text, contract (§6.3 addto).
 		return 0, "", fmt.Errorf("TODO: Destination file %s does not exist.", path) //nolint:revive,staticcheck
 	}
-	res, err := s.addTo(path, text, dateOnAdd, priorityOnAdd, now)
+	allocator, err := s.idAllocatorFor(path, now)
+	if err != nil {
+		return 0, "", err
+	}
+	res, err := s.addTo(path, text, priorityOnAdd, allocator)
 	if err != nil {
 		return 0, "", err
 	}
 	return res.LineNumber, res.Text, nil
 }
 
-// addTo implements todo.sh's _addto: clean, uppercase the priority, insert
-// the date after an existing priority, prepend priority_on_add, fix a
-// missing end of line, append, and return the new line number.
-func (s *Store) addTo(file, text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (AddResult, error) {
+// addTo implements todo.sh's _addto: clean, uppercase the priority, prepend
+// priority_on_add, optionally insert a timestamp ID, fix a missing end of
+// line, append, and return the new line number.
+func (s *Store) addTo(file, text, priorityOnAdd string, allocator *idAllocator) (AddResult, error) {
 	input := cleanInput(text)
 	input = uppercasePriority(input)
-	if dateOnAdd {
-		input = dateOnAddRe.ReplaceAllString(input, "${1}"+now.Format("2006-01-02")+" ")
-	}
 	if priorityOnAdd != "" && !priorityOnAddRe.MatchString(input) {
 		input = "(" + priorityOnAdd + ") " + input
+	}
+	if allocator != nil {
+		prefix := parseTaskPrefix(input)
+		if prefix.uuid == "" {
+			// Generated IDs follow the optional done marker and priority, before
+			// any legacy date or ordinary task text.
+			prefixLen := 0
+			if prefix.done {
+				prefixLen += len(donePrefix)
+			}
+			prefixLen += len(prefix.priority)
+			input = input[:prefixLen] + allocator.nextID() + " " + input[prefixLen:]
+		} else {
+			// Explicit IDs are retained and participate in this batch's
+			// collision set so later generated IDs cannot duplicate them.
+			allocator.reserve(prefix.uuid)
+		}
 	}
 	lines, _, err := readLines(file)
 	if err != nil {
@@ -94,6 +120,20 @@ func (s *Store) addTo(file, text string, dateOnAdd bool, priorityOnAdd string, n
 		return AddResult{}, err
 	}
 	return AddResult{LineNumber: len(lines) + 1, Text: input}, nil
+}
+
+// idAllocatorFor snapshots the destination's existing identifiers once for
+// the current add operation. Disabled stores avoid the extra read entirely so
+// their legacy error and append behavior is unchanged.
+func (s *Store) idAllocatorFor(file string, now time.Time) (*idAllocator, error) {
+	if !s.EnableUUID {
+		return nil, nil
+	}
+	lines, _, err := readLines(file)
+	if err != nil {
+		return nil, err
+	}
+	return newIDAllocator(lines, now), nil
 }
 
 // cleanInput maps CR and LF to spaces, todo.sh's cleaninput: tasks always
@@ -533,10 +573,6 @@ func delTermLine(line, term string) string {
 var (
 	// lowerPriRe matches a lowercase priority at the start of the text.
 	lowerPriRe = regexp.MustCompile(`^\([a-z]\)`)
-
-	// dateOnAddRe matches the optional priority that date_on_add inserts
-	// the date after: s/^\(([A-Z]) \)\{0,1\}/\1"$now "/.
-	dateOnAddRe = regexp.MustCompile(`^(\([A-Z]\) )?`)
 
 	// priorityOnAddRe is grep '^([A-Z])': an existing priority suppresses
 	// the priority_on_add prefix (no trailing space required).

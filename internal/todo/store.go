@@ -27,6 +27,10 @@ type Store struct {
 	// move leave a blank line behind instead of removing the line.
 	PreserveLineNumbers bool
 
+	// EnableUUID adds a UTC timestamp identifier to tasks created by add,
+	// addm, and addto. Existing task text remains unchanged when disabled.
+	EnableUUID bool
+
 	// SentenceDelimiters mirrors SENTENCE_DELIMITERS: append inserts no
 	// space before text starting with one of these characters.
 	SentenceDelimiters string
