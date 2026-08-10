@@ -79,8 +79,8 @@ func TestDefaults(t *testing.T) {
 	if !cfg.AutoArchive {
 		t.Error("AutoArchive = false, want true")
 	}
-	if cfg.DateOnAdd {
-		t.Error("DateOnAdd = true, want false")
+	if cfg.EnableUUID {
+		t.Error("EnableUUID = true, want false")
 	}
 	if cfg.PriorityOnAdd != "" {
 		t.Errorf("PriorityOnAdd = %q, want empty", cfg.PriorityOnAdd)
@@ -192,7 +192,14 @@ func TestPrecedenceBools(t *testing.T) {
 		{"force", "force", "TODOTXT_FORCE", func(b bool) Options { return Options{Force: b, ForceSet: true} }, func(c Config) bool { return c.Force }, false},
 		{"preserve_line_numbers", "preserve_line_numbers", "TODOTXT_PRESERVE_LINE_NUMBERS", func(b bool) Options { return Options{Preserve: b, PreserveSet: true} }, func(c Config) bool { return c.PreserveLineNumbers }, true},
 		{"auto_archive", "auto_archive", "TODOTXT_AUTO_ARCHIVE", func(b bool) Options { return Options{AutoArchive: b, AutoArchiveSet: true} }, func(c Config) bool { return c.AutoArchive }, true},
-		{"date_on_add", "date_on_add", "TODOTXT_DATE_ON_ADD", func(b bool) Options { return Options{DateOnAdd: b, DateOnAddSet: true} }, func(c Config) bool { return c.DateOnAdd }, false},
+		{
+			name:    "enable_uuid",
+			tomlKey: "enable_uuid",
+			envName: "GTDO_ENABLE_UUID",
+			mkFlag:  func(bool) Options { return Options{} },
+			get:     func(c Config) bool { return c.EnableUUID },
+			def:     false,
+		},
 		{"plain", "", "TODOTXT_PLAIN", func(b bool) Options { return Options{Plain: b, PlainSet: true} }, func(c Config) bool { return c.Plain }, false},
 	}
 	for _, tc := range cases {
@@ -221,11 +228,38 @@ func TestPrecedenceBools(t *testing.T) {
 				t.Error("env layer did not win over TOML")
 			}
 
-			// Flag layer beats env.
-			if got := tc.get(loadWith(t, withOpts(t, tc.mkFlag(true), body), h)); !got {
-				t.Error("flag layer did not win over env")
+			// Flag layer beats env when this setting has a CLI flag.
+			flagOpts := tc.mkFlag(true)
+			if flagOpts != (Options{}) {
+				if got := tc.get(loadWith(t, withOpts(t, flagOpts, body), h)); !got {
+					t.Error("flag layer did not win over env")
+				}
 			}
 		})
+	}
+}
+
+// TestEnableUUIDPrecedence pins the environment-over-TOML precedence for the
+// setting that has no command-line override.
+func TestEnableUUIDPrecedence(t *testing.T) {
+	h := home(t)
+	body := "[behavior]\nenable_uuid = true\n"
+
+	if got := loadWith(t, Options{}, h).EnableUUID; got {
+		t.Error("default EnableUUID = true, want false")
+	}
+	if got := loadWith(t, withOpts(t, Options{}, body), h).EnableUUID; !got {
+		t.Error("TOML enable_uuid did not enable the setting")
+	}
+
+	t.Setenv("GTDO_ENABLE_UUID", "0")
+	if got := loadWith(t, withOpts(t, Options{}, body), h).EnableUUID; got {
+		t.Error("GTDO_ENABLE_UUID=0 did not override TOML")
+	}
+
+	t.Setenv("GTDO_ENABLE_UUID", "1")
+	if got := loadWith(t, withOpts(t, Options{}, body), h).EnableUUID; !got {
+		t.Error("GTDO_ENABLE_UUID=1 did not enable the setting")
 	}
 }
 
@@ -437,7 +471,7 @@ report_file = "~/todo/report.txt"
 force = true
 preserve_line_numbers = false
 auto_archive = false
-date_on_add = true
+enable_uuid = true
 priority_on_add = "B"
 verbose = 2
 default_action = "list"
@@ -471,9 +505,9 @@ yellow = "\\033[1;43m"
 	if cfg.ReportFile != filepath.Join(h, "todo", "report.txt") {
 		t.Errorf("ReportFile = %q", cfg.ReportFile)
 	}
-	if !cfg.Force || cfg.PreserveLineNumbers || cfg.AutoArchive || !cfg.DateOnAdd {
-		t.Errorf("bools = force:%v preserve:%v archive:%v date:%v, want true,false,false,true",
-			cfg.Force, cfg.PreserveLineNumbers, cfg.AutoArchive, cfg.DateOnAdd)
+	if !cfg.Force || cfg.PreserveLineNumbers || cfg.AutoArchive || !cfg.EnableUUID {
+		t.Errorf("bools = force:%v preserve:%v archive:%v uuid:%v, want true,false,false,true",
+			cfg.Force, cfg.PreserveLineNumbers, cfg.AutoArchive, cfg.EnableUUID)
 	}
 	if cfg.PriorityOnAdd != "B" || cfg.Verbose != 2 || cfg.DefaultAction != "list" || cfg.SourceVar != "~/done.txt" || cfg.SentenceDelimiters != ".;" {
 		t.Errorf("strings = %q/%d/%q/%q/%q, want B/2/list/~/done.txt/.;",

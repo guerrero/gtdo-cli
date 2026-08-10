@@ -21,8 +21,6 @@ type Options struct {
 	PreserveSet    bool
 	AutoArchive    bool
 	AutoArchiveSet bool
-	DateOnAdd      bool
-	DateOnAddSet   bool
 	VerboseCount   int
 	HideProjects   bool
 	HideContexts   bool
@@ -48,7 +46,7 @@ type Config struct {
 	Force               bool
 	PreserveLineNumbers bool
 	AutoArchive         bool
-	DateOnAdd           bool
+	EnableUUID          bool
 	PriorityOnAdd       string
 	Verbose             int
 	DefaultAction       string
@@ -110,7 +108,7 @@ func resolve(opts Options, f fileConfig, home string) Config {
 		Force:               pickBool(opts.ForceSet, opts.Force, "TODOTXT_FORCE", f.Behavior.Force),
 		PreserveLineNumbers: pickBool(opts.PreserveSet, opts.Preserve, "TODOTXT_PRESERVE_LINE_NUMBERS", f.Behavior.PreserveLineNumbers),
 		AutoArchive:         pickBool(opts.AutoArchiveSet, opts.AutoArchive, "TODOTXT_AUTO_ARCHIVE", f.Behavior.AutoArchive),
-		DateOnAdd:           pickBool(opts.DateOnAddSet, opts.DateOnAdd, "TODOTXT_DATE_ON_ADD", f.Behavior.DateOnAdd),
+		EnableUUID:          pickBool(false, false, "GTDO_ENABLE_UUID", f.Behavior.EnableUUID),
 		Plain:               pickBool(opts.PlainSet, opts.Plain, "TODOTXT_PLAIN", false),
 		HideProjects:        opts.HideProjects,
 		HideContexts:        opts.HideContexts,

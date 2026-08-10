@@ -25,7 +25,7 @@ type behaviorTOML struct {
 	Force               bool   `toml:"force"`
 	PreserveLineNumbers bool   `toml:"preserve_line_numbers"`
 	AutoArchive         bool   `toml:"auto_archive"`
-	DateOnAdd           bool   `toml:"date_on_add"`
+	EnableUUID          bool   `toml:"enable_uuid"`
 	PriorityOnAdd       string `toml:"priority_on_add"`
 	Verbose             int    `toml:"verbose"`
 	DefaultAction       string `toml:"default_action"`

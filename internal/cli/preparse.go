@@ -63,10 +63,6 @@ func Preparse(args []string) (*config.Options, string, []string, error) {
 				opts.Plain, opts.PlainSet = true, true
 			case 'P':
 				opts.HidePriority = !opts.HidePriority
-			case 't':
-				opts.DateOnAdd, opts.DateOnAddSet = true, true
-			case 'T':
-				opts.DateOnAdd, opts.DateOnAddSet = false, true
 			case 'v':
 				opts.VerboseCount++
 			case 'V':

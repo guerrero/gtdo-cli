@@ -9,6 +9,7 @@ func defaultFileConfig() fileConfig {
 		Behavior: behaviorTOML{
 			PreserveLineNumbers: true,
 			AutoArchive:         true,
+			EnableUUID:          false,
 			Verbose:             1,
 			SentenceDelimiters:  ",.:;",
 		},
