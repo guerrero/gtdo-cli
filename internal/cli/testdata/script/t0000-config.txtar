@@ -75,7 +75,7 @@ exec gtdo -d minimal.json list
 cmp stdout minimal-list.want
 
 -- usage.want --
-Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 Try 'gtdo -h' for more information.
 -- list.want --
 1 pay the bills

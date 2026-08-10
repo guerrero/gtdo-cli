@@ -15,7 +15,7 @@ var ProgName = "gtdo"
 // onelineUsage is the shared one-line usage string (§6.4). Its flag set is
 // the plan's literal string even though the full flag set is larger.
 func onelineUsage() string {
-	return fmt.Sprintf("%s [-fhpantvV] [-d todo_config] action [task_number] [task_description]", ProgName)
+	return fmt.Sprintf("%s [-fhpanvV] [-d todo_config] action [task_number] [task_description]", ProgName)
 }
 
 // UsageString is the usage text printed to stdout when no action (or an

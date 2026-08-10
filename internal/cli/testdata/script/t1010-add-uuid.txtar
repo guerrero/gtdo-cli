@@ -1,0 +1,86 @@
+# Port of the date-on-add session with opt-in timestamp IDs. The default
+# session first proves that add remains byte-for-byte legacy when UUIDs are
+# disabled; the JSON file then enables IDs for creation and rewrite coverage.
+
+env GTDO_TEST_NOW=2009-02-13T04:40:00.120Z
+exec gtdo add legacy task
+cmp stdout legacy.want
+
+exec gtdo -d uuid.json add '(a) priority task'
+cmp stdout priority.want
+
+exec sh -c 'gtdo -d uuid.json addm "$(cat addm.txt)"'
+cmp stdout addm.want
+
+env GTDO_TEST_NOW=2009-02-13T04:40:59.990Z
+exec sh -c 'gtdo -d uuid.json addm "$(cat rollover.txt)"'
+cmp stdout rollover.want
+
+exec gtdo -pd uuid.json list
+cmp stdout list.want
+
+exec gtdo -d uuid.json append 2 today
+cmp stdout edit.want
+
+exec cat todo.txt
+cmp stdout todo.want
+
+# Retired date-on-add flags are unknown and fail before an action runs.
+! exec gtdo -t list
+cmp stdout unknown-t.want
+! exec gtdo -T list
+cmp stdout unknown-T.want
+
+-- uuid.json --
+{"behaviour":{"enableUUID":true}}
+-- legacy.want --
+1 legacy task
+TODO: 1 added.
+-- priority.want --
+2 (A) 20090213T044000.12Z priority task
+TODO: 2 added.
+-- addm.txt --
+eat apples
+x done task
+drink milk
+-- addm.want --
+3 20090213T044000.13Z eat apples
+TODO: 3 added.
+4 x 20090213T044000.14Z done task
+TODO: 4 added.
+5 20090213T044000.15Z drink milk
+TODO: 5 added.
+-- rollover.txt --
+last second
+next second
+-- rollover.want --
+6 20090213T044059.99Z last second
+TODO: 6 added.
+7 20090213T044100.00Z next second
+TODO: 7 added.
+-- list.want --
+2 (A) 20090213T044000.12Z priority task
+3 20090213T044000.13Z eat apples
+5 20090213T044000.15Z drink milk
+6 20090213T044059.99Z last second
+7 20090213T044100.00Z next second
+1 legacy task
+4 x 20090213T044000.14Z done task
+--
+TODO: 7 of 7 tasks shown
+-- edit.want --
+2 (A) 20090213T044000.12Z priority task today
+-- todo.want --
+legacy task
+(A) 20090213T044000.12Z priority task today
+20090213T044000.13Z eat apples
+x 20090213T044000.14Z done task
+20090213T044000.15Z drink milk
+20090213T044059.99Z last second
+20090213T044100.00Z next second
+-- unknown-t.want --
+Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
+Try 'gtdo -h' for more information.
+-- unknown-T.want --
+Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
+Try 'gtdo -h' for more information.

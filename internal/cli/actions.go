@@ -150,6 +150,7 @@ func newSession(cmd *cobra.Command, cfg *config.Config) (*session, error) {
 		DoneFile:            cfg.DoneFile,
 		ReportFile:          cfg.ReportFile,
 		PreserveLineNumbers: cfg.PreserveLineNumbers,
+		EnableUUID:          cfg.EnableUUID,
 		SentenceDelimiters:  cfg.SentenceDelimiters,
 	}
 	if err := st.Ensure(); err != nil {

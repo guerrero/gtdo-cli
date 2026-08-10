@@ -27,7 +27,7 @@ func actionAdd(cmd *cobra.Command, args []string, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	line, text, err := s.store.Add(input, cfg.DateOnAdd, cfg.PriorityOnAdd, now())
+	line, text, err := s.store.Add(input, cfg.PriorityOnAdd, now())
 	if err != nil {
 		return s.die(err.Error())
 	}
@@ -46,7 +46,7 @@ func actionAddm(cmd *cobra.Command, args []string, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	results, err := s.store.Addm(input, cfg.DateOnAdd, cfg.PriorityOnAdd, now())
+	results, err := s.store.Addm(input, cfg.PriorityOnAdd, now())
 	if err != nil {
 		return s.die(err.Error())
 	}
@@ -69,7 +69,7 @@ func actionAddto(cmd *cobra.Command, args []string, cfg *config.Config) error {
 		return s.die(`usage: ` + ProgName + ` addto DEST "TODO ITEM"`)
 	}
 	input := strings.Join(args[1:], " ")
-	line, text, err := s.store.Addto(args[0], input, cfg.DateOnAdd, cfg.PriorityOnAdd, now())
+	line, text, err := s.store.Addto(args[0], input, cfg.PriorityOnAdd, now())
 	if err != nil {
 		return s.die(err.Error())
 	}

@@ -10,7 +10,7 @@ func TestDecodeFileConfig(t *testing.T) {
 	err := decodeFileConfig([]byte(`{
       "dir":"~/todo",
       "files":{"todo":"todo.txt","done":"done.txt","report":"report.txt"},
-      "behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"done.txt","sentenceDelimiters":".;","allowedContexts":["@work"],"allowedProjects":["+gtdo"]},
+      "behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"enableUUID":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"done.txt","sentenceDelimiters":".;","allowedContexts":["@work"],"allowedProjects":["+gtdo"]},
       "colors":{"priA":"yellow","priZ":"cyan","colorDone":"light_grey","colorProject":"light_cyan","colorContext":"blue","colorDate":"red","colorNumber":"green","colorMeta":"brown","map":{"yellow":"\\033[1;43m"}}
     }`), &cfg)
 	if err != nil {
@@ -19,7 +19,7 @@ func TestDecodeFileConfig(t *testing.T) {
 	if cfg.Dir != "~/todo" || cfg.Files.Todo != "todo.txt" || cfg.Files.Done != "done.txt" || cfg.Files.Report != "report.txt" {
 		t.Fatalf("paths = %#v/%q, want complete JSON paths", cfg.Files, cfg.Dir)
 	}
-	if !cfg.Behaviour.Force || cfg.Behaviour.PreserveLineNumbers || cfg.Behaviour.Verbose != 2 {
+	if !cfg.Behaviour.Force || cfg.Behaviour.PreserveLineNumbers || !cfg.Behaviour.EnableUUID || cfg.Behaviour.Verbose != 2 {
 		t.Fatalf("behaviour = %#v, want decoded values", cfg.Behaviour)
 	}
 	if len(cfg.Behaviour.AllowedContexts) != 1 || cfg.Behaviour.AllowedContexts[0] != "@work" || len(cfg.Behaviour.AllowedProjects) != 1 || cfg.Behaviour.AllowedProjects[0] != "+gtdo" {

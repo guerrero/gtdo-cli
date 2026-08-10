@@ -11,10 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configurable `format` action for normalizing todo.txt and done.txt task fields.
 
+- Added opt-in `enableUUID` / `GTDO_ENABLE_UUID` timestamp IDs for new tasks,
+  formatted as `YYYYMMDDTHHMMSS.nnZ`. IDs advance in 10 ms steps when a
+  collision is detected and remain stable through edits and moves.
+
 ### Changed
 
 - Replaced TOML configuration with a strict camelCase JSON format at
   `~/.config/gtdo/config.json`.
+
+### Removed
+
+- Retired the legacy date-on-add behavior, including its `date_on_add` setting,
+  `TODOTXT_DATE_ON_ADD` environment variable, and `-t` / `-T` options.
 
 ## [0.1.0] - 2026-08-09
 

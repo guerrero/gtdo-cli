@@ -17,7 +17,7 @@ type behaviourJSON struct {
 	Force               bool     `json:"force"`
 	PreserveLineNumbers bool     `json:"preserveLineNumbers"`
 	AutoArchive         bool     `json:"autoArchive"`
-	DateOnAdd           bool     `json:"dateOnAdd"`
+	EnableUUID          bool     `json:"enableUUID"`
 	PriorityOnAdd       string   `json:"priorityOnAdd"`
 	Verbose             int      `json:"verbose"`
 	DefaultAction       string   `json:"defaultAction"`
@@ -108,7 +108,7 @@ func validateFileConfigKeys(raw any) error {
 	}
 	if behaviour, ok := root["behaviour"].(map[string]any); ok {
 		if err := validateJSONObjectKeys(behaviour, map[string]struct{}{
-			"force": {}, "preserveLineNumbers": {}, "autoArchive": {}, "dateOnAdd": {},
+			"force": {}, "preserveLineNumbers": {}, "autoArchive": {}, "enableUUID": {},
 			"priorityOnAdd": {}, "verbose": {}, "defaultAction": {}, "sourceVar": {},
 			"sentenceDelimiters": {}, "taskFormat": {}, "allowedContexts": {}, "allowedProjects": {},
 		}); err != nil {

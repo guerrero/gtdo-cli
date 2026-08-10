@@ -52,15 +52,19 @@ func (t Task) Priority() (byte, bool) {
 	return m[1][0], true
 }
 
-// Date returns the YYYY-MM-DD date at the start of the task: the creation
-// date after an optional priority, or the completion date after the "x "
-// marker. todo.sh treats both positions with the same date expression.
+// Date returns the legacy YYYY-MM-DD date at the start of the task: the
+// creation date after optional priority/ID metadata, or the completion date
+// after the "x " marker. Canonical IDs are skipped rather than returned as
+// dates.
 func (t Task) Date() string {
-	rest := strings.TrimPrefix(t.Text, donePrefix)
-	if m := priorityRe.FindString(rest); m != "" {
-		rest = rest[len(m):]
+	p := parseTaskPrefix(t.Text)
+	if p.date != "" {
+		return p.date
 	}
-	return dateRe.FindString(rest)
+	// Keep the historical unbounded dateRe behavior for legacy lines whose
+	// date is followed by a non-space delimiter. The shared prefix parser is
+	// intentionally stricter so render can preserve metadata boundaries.
+	return dateRe.FindString(p.rest)
 }
 
 // Contexts returns the @-sigil words found in the text, sigil included, in

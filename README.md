@@ -46,7 +46,7 @@ go install github.com/guerrero/gtdo/cmd/gtdo@latest
 ## Usage
 
 ```
-gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 ```
 
 Flags go before the action, getopts-style, exactly like todo.sh. `gtdo -h`
@@ -70,6 +70,7 @@ configuration. A missing file is not an error — every value has a default:
     "verbose": 1,
     "force": false,
     "preserveLineNumbers": true,
+    "enableUUID": false,
     "taskFormat": "[checked][priority][uuid][content][keywords][project][context]",
     "allowedContexts": ["@work", "@home"],
     "allowedProjects": ["+gtdo", "+personal"]
@@ -92,9 +93,30 @@ with tags no longer allowed. A rejected tag reports its category, token, file,
 and 1-based line number as `TODO: Context "@home" is not allowed in
 /path/to/todo.txt at line 3.` (with `Project` for a project tag).
 
-The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`,
-`DONE_FILE`, `REPORT_FILE`, `TODOTXT_*`) keep working for scripting
+The usual todo.txt environment variables (`TODO_DIR`, `TODO_FILE`, `DONE_FILE`,
+`REPORT_FILE`, `TODOTXT_FORCE`, `TODOTXT_PRESERVE_LINE_NUMBERS`,
+`TODOTXT_AUTO_ARCHIVE`, `TODOTXT_PRIORITY_ON_ADD`, `TODOTXT_VERBOSE`,
+`TODOTXT_DEFAULT_ACTION`, `TODOTXT_SOURCEVAR`, `TODOTXT_PLAIN`,
+`GTDO_ENABLE_UUID`, and `SENTENCE_DELIMITERS`) keep working for scripting
 compatibility.
+
+Timestamp IDs are opt in. Add this to the `behaviour` section to assign an ID to
+each newly created task:
+
+```json
+{"behaviour":{"enableUUID":true}}
+```
+
+`GTDO_ENABLE_UUID` overrides the JSON value. When enabled, gtdo adds a UTC
+timestamp ID in the exact `YYYYMMDDTHHMMSS.nnZ` format (for example,
+`20260808T143045.12Z`). If a candidate collides with an existing ID, or with
+one allocated earlier in the same batch, gtdo advances it by 10 ms and retries.
+IDs are creation-only and preserved through edits and moves; enabling the
+setting later never backfills existing tasks.
+
+The former date-on-add behavior has been retired, so add commands no longer
+insert a creation date automatically. Dates already present in a task remain
+unchanged.
 
 ## Development
 

@@ -9,14 +9,14 @@
 # scope (§2).
 
 exec gtdo help
-stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Usage: gtdo \[-fhpanvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
 stdout '^  Options:$'
 stdout '^  Built-in Actions:$'
 
 # -v help is the same text as plain help: the environment section needs
 # TODOTXT_VERBOSE > 1, exactly like todo.sh's `[ "$TODOTXT_VERBOSE" -gt 1 ]`.
 exec gtdo -v help
-stdout '^  Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
+stdout '^  Usage: gtdo \[-fhpanvV\] \[-d todo_config\] action \[task_number\] \[task_description\]$'
 stdout '^  Options:$'
 stdout '^  Built-in Actions:$'
 ! stdout 'Environment variables:'
@@ -28,7 +28,7 @@ exec gtdo -vv help
 cmp stdout help-vv.want
 
 -- help-vv.want --
-  Usage: gtdo [-fhpantvV] [-d todo_config] action [task_number] [task_description]
+  Usage: gtdo [-fhpanvV] [-d todo_config] action [task_number] [task_description]
 
   Options:
     -@
@@ -55,10 +55,6 @@ cmp stdout help-vv.want
         Don't preserve line numbers; automatically remove blank lines on task deletion
     -N
         Preserve line numbers
-    -t
-        Prepend the current date to a task automatically when it's added.
-    -T
-        Do not prepend the current date to a task automatically when it's added.
     -v
         Verbose mode turns on confirmation messages
     -vv
@@ -77,7 +73,6 @@ cmp stdout help-vv.want
     TODOTXT_FORCE=1                  is same as option -f
     TODOTXT_PRESERVE_LINE_NUMBERS    is same as option -n (0)/-N (1)
     TODOTXT_PLAIN                    is same as option -p (1)/-c (0)
-    TODOTXT_DATE_ON_ADD              is same as option -t (1)/-T (0)
     TODOTXT_PRIORITY_ON_ADD=pri      default priority A-Z
     TODOTXT_VERBOSE=1                is same as option -v
     TODOTXT_DEFAULT_ACTION=""        run this when called with no arguments

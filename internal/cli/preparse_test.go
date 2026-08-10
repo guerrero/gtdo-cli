@@ -101,6 +101,8 @@ func TestPreparse(t *testing.T) {
 			},
 		},
 		{"unknown flag", []string{"-q", "list"}, "", nil, nil},
+		{"removed date flag t", []string{"-t", "list"}, "", nil, nil},
+		{"removed date flag T", []string{"-T", "list"}, "", nil, nil},
 		{"double dash", []string{"--", "-p"}, "-p", nil, nil},
 		{"lone dash is action", []string{"-"}, "-", nil, nil},
 		{"x is no-op", []string{"-x", "list"}, "list", nil, nil},
@@ -108,7 +110,7 @@ func TestPreparse(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			opts, action, rest, err := Preparse(tc.args)
-			if tc.name == "d missing arg" || tc.name == "unknown flag" {
+			if tc.name == "d missing arg" || tc.name == "unknown flag" || tc.name == "removed date flag t" || tc.name == "removed date flag T" {
 				if err == nil {
 					t.Fatal("want usage error")
 				}

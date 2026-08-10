@@ -12,6 +12,7 @@ func defaultFileConfig() fileConfig {
 		Behaviour: behaviourJSON{
 			PreserveLineNumbers: true,
 			AutoArchive:         true,
+			EnableUUID:          false,
 			Verbose:             1,
 			SentenceDelimiters:  ",.:;",
 			TaskFormat:          DefaultTaskFormat,

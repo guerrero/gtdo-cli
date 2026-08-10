@@ -42,6 +42,31 @@ action rewrites both configured task files, or the selected file when
 .I FILE
 is specified.
 {{.Commands}}
+.SH CONFIGURATION
+.PP
+gtdo reads strict camelCase JSON configuration from
+.IR ~/.config/gtdo/config.json
+unless another path is selected with
+.B \-d
+or
+.B $GTDO_CONFIG .
+.PP
+Timestamp IDs are opt in. Set
+.B behaviour.enableUUID
+to true in the JSON configuration, or use
+.B GTDO_ENABLE_UUID .
+When enabled, each newly created task receives a UTC timestamp ID in the exact format
+.B YYYYMMDDTHHMMSS.nnZ
+(for example,
+.B 20260808T143045.12Z ) .
+If a candidate collides with an existing ID, or with one allocated earlier in
+the same batch, gtdo advances it by 10 ms and retries. IDs are creation-only
+and are preserved through edits and moves; enabling the setting later never
+backfills existing tasks.
+.PP
+The former date-on-add behavior has been retired, so add commands no longer
+insert a creation date automatically. Dates already present in a task remain
+unchanged.
 .SH OPTIONS
 .TP
 .B \-@
@@ -80,12 +105,6 @@ Don't preserve line numbers; automatically remove blank lines on task deletion
 .B \-N
 Preserve line numbers
 .TP
-.B \-t
-Prepend the current date to a task automatically when it's added.
-.TP
-.B \-T
-Do not prepend the current date to a task automatically when it's added.
-.TP
 .B \-v
 Verbose mode turns on confirmation messages
 .TP
@@ -97,11 +116,16 @@ Displays version and build information
 .TP
 .B \-x
 No-op; accepted for compatibility with todo.txt-cli
-.SH CONFIGURATION
+.PP
 gtdo reads configuration from JSON files.  The following keys have no
 environment-variable or command-line equivalents.  Place these keys in the
 .B behaviour
 object.
+.TP
+.B behaviour.enableUUID
+When true, add, addm, and addto assign UTC timestamp IDs to new tasks. IDs
+advance in 10 ms steps on collisions, are preserved through edits and moves,
+and never backfill existing tasks.
 .TP
 .B allowedContexts
 An array of complete context tokens, such as
@@ -173,11 +197,15 @@ Same as option \-n (0) or \-N (1).
 .B TODOTXT_PLAIN
 Same as option \-p (1) or \-c (0).
 .TP
-.B TODOTXT_DATE_ON_ADD
-Same as option \-t (1) or \-T (0).
-.TP
 .B TODOTXT_PRIORITY_ON_ADD=pri
 Default priority A\-Z.
+.TP
+.B GTDO_ENABLE_UUID
+Same as the
+.B behaviour.enableUUID
+behavior setting. When enabled, new tasks receive UTC timestamp IDs in the
+.B YYYYMMDDTHHMMSS.nnZ
+format.
 .TP
 .B TODOTXT_VERBOSE=1
 Same as option \-v.

@@ -81,9 +81,6 @@ func TestDefaults(t *testing.T) {
 	if !cfg.AutoArchive {
 		t.Error("AutoArchive = false, want true")
 	}
-	if cfg.DateOnAdd {
-		t.Error("DateOnAdd = true, want false")
-	}
 	if cfg.PriorityOnAdd != "" {
 		t.Errorf("PriorityOnAdd = %q, want empty", cfg.PriorityOnAdd)
 	}
@@ -242,7 +239,7 @@ func TestPrecedenceBools(t *testing.T) {
 		{"force", "force", "TODOTXT_FORCE", func(b bool) Options { return Options{Force: b, ForceSet: true} }, func(c Config) bool { return c.Force }, false},
 		{"preserveLineNumbers", "preserveLineNumbers", "TODOTXT_PRESERVE_LINE_NUMBERS", func(b bool) Options { return Options{Preserve: b, PreserveSet: true} }, func(c Config) bool { return c.PreserveLineNumbers }, true},
 		{"autoArchive", "autoArchive", "TODOTXT_AUTO_ARCHIVE", func(b bool) Options { return Options{AutoArchive: b, AutoArchiveSet: true} }, func(c Config) bool { return c.AutoArchive }, true},
-		{"dateOnAdd", "dateOnAdd", "TODOTXT_DATE_ON_ADD", func(b bool) Options { return Options{DateOnAdd: b, DateOnAddSet: true} }, func(c Config) bool { return c.DateOnAdd }, false},
+		{"enableUUID", "enableUUID", "GTDO_ENABLE_UUID", func(bool) Options { return Options{} }, func(c Config) bool { return c.EnableUUID }, false},
 		{"plain", "", "TODOTXT_PLAIN", func(b bool) Options { return Options{Plain: b, PlainSet: true} }, func(c Config) bool { return c.Plain }, false},
 	}
 	for _, tc := range cases {
@@ -271,11 +268,32 @@ func TestPrecedenceBools(t *testing.T) {
 				t.Error("env layer did not win over JSON")
 			}
 
-			// Flag layer beats env.
-			if got := tc.get(loadWith(t, withOpts(t, tc.mkFlag(true), body), h)); !got {
-				t.Error("flag layer did not win over env")
+			// Flag layer beats env when this setting has a CLI flag.
+			if flagOpts := tc.mkFlag(true); flagOpts != (Options{}) {
+				if got := tc.get(loadWith(t, withOpts(t, flagOpts, body), h)); !got {
+					t.Error("flag layer did not win over env")
+				}
 			}
 		})
+	}
+}
+
+func TestEnableUUIDPrecedence(t *testing.T) {
+	h := home(t)
+	path := writeConfig(t, filepath.Join(t.TempDir(), "config.json"), `{"behaviour":{"enableUUID":true}}`)
+	cfg := loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "missing.json"))
+	if !cfg.EnableUUID {
+		t.Fatal("JSON enableUUID did not enable the setting")
+	}
+	t.Setenv("GTDO_ENABLE_UUID", "0")
+	cfg = loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "missing.json"))
+	if cfg.EnableUUID {
+		t.Fatal("GTDO_ENABLE_UUID=0 did not override JSON")
+	}
+	t.Setenv("GTDO_ENABLE_UUID", "1")
+	cfg = loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "missing.json"))
+	if !cfg.EnableUUID {
+		t.Fatal("GTDO_ENABLE_UUID=1 did not enable the setting")
 	}
 }
 
@@ -470,7 +488,7 @@ func TestPathExpansion(t *testing.T) {
 // TestJSONFullSchema decodes every key of the §5.2 schema at once.
 func TestJSONFullSchema(t *testing.T) {
 	h := home(t)
-	body := `{"dir":"~/todo","files":{"todo":"~/todo/todo.txt","done":"~/todo/done.txt","report":"~/todo/report.txt"},"behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"dateOnAdd":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"~/done.txt","sentenceDelimiters":".;","allowedContexts":["@work","@home"],"allowedProjects":["+gtdo"]},"colors":{"priA":"yellow","priB":"\\033[0;32m","colorProject":"light_cyan","colorMeta":"","map":{"yellow":"\\033[1;43m"}}}`
+	body := `{"dir":"~/todo","files":{"todo":"~/todo/todo.txt","done":"~/todo/done.txt","report":"~/todo/report.txt"},"behaviour":{"force":true,"preserveLineNumbers":false,"autoArchive":false,"enableUUID":true,"priorityOnAdd":"B","verbose":2,"defaultAction":"list","sourceVar":"~/done.txt","sentenceDelimiters":".;","allowedContexts":["@work","@home"],"allowedProjects":["+gtdo"]},"colors":{"priA":"yellow","priB":"\\033[0;32m","colorProject":"light_cyan","colorMeta":"","map":{"yellow":"\\033[1;43m"}}}`
 	path := writeConfig(t, filepath.Join(t.TempDir(), "config.json"), body)
 	cfg := loadAt(t, Options{ConfigPath: path}, h, filepath.Join(t.TempDir(), "nonexistent", "config.json"))
 
@@ -489,9 +507,9 @@ func TestJSONFullSchema(t *testing.T) {
 	if cfg.ReportFile != filepath.Join(h, "todo", "report.txt") {
 		t.Errorf("ReportFile = %q", cfg.ReportFile)
 	}
-	if !cfg.Force || cfg.PreserveLineNumbers || cfg.AutoArchive || !cfg.DateOnAdd {
-		t.Errorf("bools = force:%v preserve:%v archive:%v date:%v, want true,false,false,true",
-			cfg.Force, cfg.PreserveLineNumbers, cfg.AutoArchive, cfg.DateOnAdd)
+	if !cfg.Force || cfg.PreserveLineNumbers || cfg.AutoArchive || !cfg.EnableUUID {
+		t.Errorf("bools = force:%v preserve:%v archive:%v uuid:%v, want true,false,false,true",
+			cfg.Force, cfg.PreserveLineNumbers, cfg.AutoArchive, cfg.EnableUUID)
 	}
 	if cfg.PriorityOnAdd != "B" || cfg.Verbose != 2 || cfg.DefaultAction != "list" || cfg.SourceVar != "~/done.txt" || cfg.SentenceDelimiters != ".;" {
 		t.Errorf("strings = %q/%d/%q/%q/%q, want B/2/list/~/done.txt/.;",

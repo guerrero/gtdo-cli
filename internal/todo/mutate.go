@@ -21,8 +21,8 @@ import (
 )
 
 // AddResult is one add/addm/addto outcome: the new line number and the
-// final task text (after cleaning, priority uppercasing, and the
-// date_on_add/priority_on_add prefixes) — the pieces the CLI prints as
+// final task text (after cleaning, priority uppercasing, timestamp-ID, and
+// priority_on_add prefixes) — the pieces the CLI prints as
 // "N text" and "PREFIX: N added.".
 type AddResult struct {
 	LineNumber int
@@ -31,8 +31,12 @@ type AddResult struct {
 
 // Add appends text as a new task to TodoFile and returns its line number
 // and final text (§6.3 add).
-func (s *Store) Add(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (int, string, error) {
-	res, err := s.addTo(s.TodoFile, text, dateOnAdd, priorityOnAdd, now)
+func (s *Store) Add(text, priorityOnAdd string, now time.Time) (int, string, error) {
+	allocator, err := s.idAllocatorFor(s.TodoFile, now)
+	if err != nil {
+		return 0, "", err
+	}
+	res, err := s.addTo(s.TodoFile, text, priorityOnAdd, allocator)
 	if err != nil {
 		return 0, "", err
 	}
@@ -42,33 +46,37 @@ func (s *Store) Add(text string, dateOnAdd bool, priorityOnAdd string, now time.
 // Addm splits text on newlines and adds each non-empty line as its own
 // task, like `IFS=$'\n'; for line in $input` (t2000 'actual multiline
 // add').
-func (s *Store) Addm(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) ([]AddResult, error) {
+func (s *Store) Addm(text, priorityOnAdd string, now time.Time) ([]AddResult, error) {
 	var pending []string
 	for _, line := range strings.Split(text, "\n") {
 		if line == "" {
 			continue
 		}
-		pending = append(pending, prepareAdd(line, dateOnAdd, priorityOnAdd, now))
+		pending = append(pending, prepareAdd(line, priorityOnAdd))
 	}
 	if len(pending) == 0 {
 		return nil, nil
 	}
-
 	lines, _, err := readLines(s.TodoFile)
 	if err != nil {
 		return nil, err
 	}
+	var allocator *idAllocator
+	if s.EnableUUID {
+		allocator = newIDAllocator(lines, now)
+	}
 	results := make([]AddResult, 0, len(pending))
+	final := make([]string, 0, len(pending))
 	for _, candidate := range pending {
+		candidate = addUUID(candidate, allocator)
 		lineNumber := len(lines) + len(results) + 1
 		if err := s.Policy.Validate(s.TodoFile, lineNumber, candidate); err != nil {
 			return nil, err
 		}
 		results = append(results, AddResult{LineNumber: lineNumber, Text: candidate})
+		final = append(final, candidate)
 	}
-	// As with repeated _addto calls, a missing end-of-line is repaired when
-	// a batch supplies its first task.
-	if err := writeLines(s.TodoFile, append(lines, pending...), true); err != nil {
+	if err := writeLines(s.TodoFile, append(lines, final...), true); err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -76,28 +84,32 @@ func (s *Store) Addm(text string, dateOnAdd bool, priorityOnAdd string, now time
 
 // Addto appends text to a file inside Dir; the destination must already
 // exist (§6.3 addto, t1020). dest is resolved relative to Dir.
-func (s *Store) Addto(dest, text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (int, string, error) {
+func (s *Store) Addto(dest, text, priorityOnAdd string, now time.Time) (int, string, error) {
 	path := filepath.Join(s.Dir, dest)
 	if !isRegular(path) {
 		// The exact todo.sh die text, contract (§6.3 addto).
 		return 0, "", fmt.Errorf("TODO: Destination file %s does not exist.", path) //nolint:revive,staticcheck
 	}
-	res, err := s.addTo(path, text, dateOnAdd, priorityOnAdd, now)
+	allocator, err := s.idAllocatorFor(path, now)
+	if err != nil {
+		return 0, "", err
+	}
+	res, err := s.addTo(path, text, priorityOnAdd, allocator)
 	if err != nil {
 		return 0, "", err
 	}
 	return res.LineNumber, res.Text, nil
 }
 
-// addTo implements todo.sh's _addto: clean, uppercase the priority, insert
-// the date after an existing priority, prepend priority_on_add, fix a
-// missing end of line, append, and return the new line number.
-func (s *Store) addTo(file, text string, dateOnAdd bool, priorityOnAdd string, now time.Time) (AddResult, error) {
+// addTo implements todo.sh's _addto: clean, uppercase the priority, prepend
+// priority_on_add, optionally insert a timestamp ID, fix a missing end of
+// line, append, and return the new line number.
+func (s *Store) addTo(file, text, priorityOnAdd string, allocator *idAllocator) (AddResult, error) {
+	input := addUUID(prepareAdd(text, priorityOnAdd), allocator)
 	lines, _, err := readLines(file)
 	if err != nil {
 		return AddResult{}, err
 	}
-	input := prepareAdd(text, dateOnAdd, priorityOnAdd, now)
 	if err := s.Policy.Validate(file, len(lines)+1, input); err != nil {
 		return AddResult{}, err
 	}
@@ -111,15 +123,46 @@ func (s *Store) addTo(file, text string, dateOnAdd bool, priorityOnAdd string, n
 
 // prepareAdd applies todo.sh's add transformations before a candidate is
 // validated or persisted.
-func prepareAdd(text string, dateOnAdd bool, priorityOnAdd string, now time.Time) string {
+func prepareAdd(text, priorityOnAdd string) string {
 	input := uppercasePriority(cleanInput(text))
-	if dateOnAdd {
-		input = dateOnAddRe.ReplaceAllString(input, "${1}"+now.Format("2006-01-02")+" ")
-	}
 	if priorityOnAdd != "" && !priorityOnAddRe.MatchString(input) {
 		input = "(" + priorityOnAdd + ") " + input
 	}
 	return input
+}
+
+// addUUID inserts or reserves one timestamp ID when UUID creation is enabled.
+// Explicit IDs are retained and reserved so later candidates in the same
+// operation cannot collide with them.
+func addUUID(input string, allocator *idAllocator) string {
+	if allocator == nil {
+		return input
+	}
+	prefix := parseTaskPrefix(input)
+	if prefix.uuid == "" {
+		prefixLen := 0
+		if prefix.done {
+			prefixLen += len(donePrefix)
+		}
+		prefixLen += len(prefix.priority)
+		return input[:prefixLen] + allocator.nextID() + " " + input[prefixLen:]
+	}
+	allocator.reserve(prefix.uuid)
+	return input
+}
+
+// idAllocatorFor snapshots the destination's existing identifiers once for
+// the current add operation. Disabled stores avoid the extra read entirely so
+// their legacy error and append behavior is unchanged.
+func (s *Store) idAllocatorFor(file string, now time.Time) (*idAllocator, error) {
+	if !s.EnableUUID {
+		return nil, nil
+	}
+	lines, _, err := readLines(file)
+	if err != nil {
+		return nil, err
+	}
+	return newIDAllocator(lines, now), nil
 }
 
 // cleanInput maps CR and LF to spaces, todo.sh's cleaninput: tasks always
@@ -153,7 +196,8 @@ func (s *Store) Append(item int, text string) (string, error) {
 	if len(text) > 0 && strings.IndexByte(s.SentenceDelimiters, text[0]) >= 0 {
 		appendSpace = ""
 	}
-	newText := task.Text + appendSpace + cleanInput(text)
+	prefix := parseMutationPrefix(task.Text)
+	newText := prefix.render(prefix.rest + appendSpace + cleanInput(text))
 	if err := s.Policy.Validate(s.TodoFile, item, newText); err != nil {
 		return "", err
 	}
@@ -187,26 +231,48 @@ func (s *Store) replaceOrPrepend(item int, text string, isReplace bool) (string,
 	if err != nil {
 		return "", "", err
 	}
-	m := priAndDateRe.FindStringSubmatch(task.Text)
-	priority, prepdate := m[1], m[2]
-	if isReplace {
-		rm := priAndDateRe.FindStringSubmatch(text)
-		if rm[2] != "" {
-			prepdate = rm[2]
-		}
-		if rm[1] != "" {
-			priority = rm[1]
-		}
-		text = text[len(rm[0]):]
+	prefix := parseMutationPrefix(task.Text)
+	inputPrefix := parseMutationPrefix(text)
+	// Before UUID metadata existed, replace/prepend did not recognize a
+	// leading done marker. Keep that byte behavior for legacy lines while
+	// retaining the canonical done+UUID prefix for migrated tasks.
+	if prefix.done && prefix.uuid == "" {
+		prefix = taskPrefix{rest: task.Text}
 	}
+	priority, prepdate := prefix.priority, prefix.date
 	input := cleanInput(text)
-	// Temporarily remove the existing priority and date, apply the change,
-	// and re-insert them (for prepend the input goes in front of the rest).
-	rest := strings.TrimPrefix(task.Text, m[1]+m[2])
-	newText := priority + prepdate + input
-	if !isReplace {
-		newText += " " + rest
+	if isReplace {
+		// A done marker at the start of replacement input was body text to
+		// todo.sh, so leave it untouched. Likewise, when an old task has no
+		// UUID, a caller's canonical-looking ID remains literal replacement
+		// text; mutations never generate or promote metadata on that line.
+		if inputPrefix.done || (prefix.uuid == "" && inputPrefix.uuid != "") {
+			if inputPrefix.priority != "" && !inputPrefix.done {
+				priority = inputPrefix.priority
+				input = strings.TrimPrefix(input, inputPrefix.priority)
+			}
+		} else {
+			if inputPrefix.date != "" {
+				prepdate = inputPrefix.date
+			}
+			if inputPrefix.priority != "" {
+				priority = inputPrefix.priority
+			}
+			// Replacement metadata is stripped from the new body. An existing
+			// identifier always wins, and the stripped body is cleaned after
+			// parsing so CR/LF never creates an embedded task line.
+			input = cleanInput(inputPrefix.rest)
+		}
 	}
+	prefix.priority = priority
+	prefix.date = prepdate
+	// Temporarily remove the existing prefix, apply the change, and
+	// re-insert it (for prepend the input goes in front of the rest).
+	newBody := input
+	if !isReplace {
+		newBody += " " + prefix.rest
+	}
+	newText := prefix.render(newBody)
 	if err := s.Policy.Validate(s.TodoFile, item, newText); err != nil {
 		return "", "", err
 	}
@@ -233,14 +299,15 @@ func (s *Store) Pri(item int, newPri byte) (PriResult, error) {
 	if err != nil {
 		return PriResult{}, err
 	}
+	prefix := parseMutationPrefix(task.Text)
 	var oldPri byte
-	if priAnyRe.MatchString(task.Text) {
-		oldPri = task.Text[1] // `${todo:1:1}` — any character in the parens
+	if prefix.priority != "" {
+		oldPri = prefix.priority[1] // `${todo:1:1}` — any character in the parens
 	}
 	newText := task.Text
 	if oldPri != newPri {
-		// sed -e "${item}s/^(.) //" -e "${item}s/^/($newpri) /"
-		newText = "(" + string(newPri) + ") " + priAnyRe.ReplaceAllString(task.Text, "")
+		prefix.priority = "(" + string(newPri) + ") "
+		newText = prefix.render(prefix.rest)
 		if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 			return PriResult{}, err
 		}
@@ -266,11 +333,13 @@ func (s *Store) Depri(items []int) ([]DepriResult, error) {
 		if err != nil {
 			return results, err
 		}
-		if !priAnyRe.MatchString(task.Text) {
+		prefix := parseMutationPrefix(task.Text)
+		if prefix.priority == "" {
 			results = append(results, DepriResult{LineNumber: item, NewText: task.Text})
 			continue
 		}
-		newText := priAnyRe.ReplaceAllString(task.Text, "")
+		prefix.priority = ""
+		newText := prefix.render(prefix.rest)
 		if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 			return results, err
 		}
@@ -301,7 +370,19 @@ func (s *Store) Do(items []int, now time.Time) ([]DoResult, error) {
 			results = append(results, DoResult{LineNumber: item, NewText: task.Text, AlreadyDone: true})
 			continue
 		}
-		newText := "x " + now.Format("2006-01-02") + " " + priAnyRe.ReplaceAllString(task.Text, "")
+		prefix := parseMutationPrefix(task.Text)
+		oldDate := prefix.date
+		prefix.done = true
+		prefix.priority = ""
+		prefix.date = now.Format("2006-01-02")
+		body := prefix.rest
+		if oldDate != "" {
+			// A leading date is creation metadata in an open task. The done
+			// action adds a completion date while leaving that old date in the
+			// body, matching todo.sh's historical output.
+			body = oldDate + " " + body
+		}
+		newText := prefix.render(body)
 		if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 			return results, err
 		}
@@ -356,15 +437,17 @@ func (s *Store) DelTerm(item int, term string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	newText := delTermLine(task.Text, term)
-	if newText == task.Text {
+	prefix := parseMutationPrefix(task.Text)
+	newBody := delTermLine(prefix.rest, term)
+	newText := prefix.render(newBody)
+	if newBody == prefix.rest {
 		// The exact todo.sh die text, contract (§6.3 del).
 		return task.Text, task.Text, fmt.Errorf("TODO: '%s' not found; no removal done.", term) //nolint:revive,staticcheck
 	}
 	if err := s.replaceTask(s.TodoFile, item, func(string) string { return newText }); err != nil {
 		return "", "", err
 	}
-	if newText == "" {
+	if newBody == "" {
 		// The term removed the whole text: todo.sh's getNewtodo dies after
 		// the seds have run, leaving the blanked line in the file (verified
 		// live: del 1 foo on "foo\nbar\n" → "\nbar\n", exit 1). The error
@@ -547,6 +630,38 @@ func (s *Store) replaceTask(path string, item int, fn func(string) string) error
 	return writeLines(path, lines, finalNL)
 }
 
+// parseMutationPrefix is the mutation-facing wrapper around the shared
+// prefix parser. Legacy mutation expressions accepted any one-character
+// priority (including lowercase) and two-to-four-digit years; retain those
+// cases while still keeping canonical IDs isolated from body edits.
+func parseMutationPrefix(text string) taskPrefix {
+	p := parseTaskPrefix(text)
+	offset := 0
+	if p.done {
+		offset = len(donePrefix)
+	}
+	if p.priority == "" {
+		if m := priAnyRe.FindString(text[offset:]); m != "" {
+			p.priority = m
+			parsed := parseTaskPrefix(text[offset+len(m):])
+			p.uuid, p.date, p.rest = parsed.uuid, parsed.date, parsed.rest
+		}
+	}
+	if p.date == "" {
+		if m := legacyMutationDateRe.FindStringSubmatch(p.rest); m != nil {
+			p.date = m[1]
+			p.rest = p.rest[len(m[0]):]
+		}
+	}
+	// A completed line without a canonical UUID is legacy todo.sh text:
+	// priority/date expressions apply only at byte zero, so the `x ` marker
+	// and everything after it must remain body text for mutation parity.
+	if p.done && p.uuid == "" {
+		return taskPrefix{rest: text}
+	}
+	return p
+}
+
 // delTermLine applies the five sed expressions of `del NR TERM` in order.
 // Each is built as a sed basic regex with the term embedded and translated
 // like the filter terms. Note the spacing idioms: `  *` is one or more
@@ -566,10 +681,6 @@ var (
 	// lowerPriRe matches a lowercase priority at the start of the text.
 	lowerPriRe = regexp.MustCompile(`^\([a-z]\)`)
 
-	// dateOnAddRe matches the optional priority that date_on_add inserts
-	// the date after: s/^\(([A-Z]) \)\{0,1\}/\1"$now "/.
-	dateOnAddRe = regexp.MustCompile(`^(\([A-Z]\) )?`)
-
 	// priorityOnAddRe is grep '^([A-Z])': an existing priority suppresses
 	// the priority_on_add prefix (no trailing space required).
 	priorityOnAddRe = regexp.MustCompile(`^\([A-Z]\)`)
@@ -579,10 +690,8 @@ var (
 	// what pri/depri/do strip.
 	priAnyRe = regexp.MustCompile(`^\(.\) `)
 
-	// priAndDateRe mirrors todo.sh's priAndDateExpr used by
-	// replaceOrPrepend: an optional "(X) " priority and an optional
-	// "YYYY-MM-DD " date (year 2-4 digits, month/day unvalidated, the
-	// parens literal in sed BRE). Group 1 is the priority label, group 2
-	// the date.
-	priAndDateRe = regexp.MustCompile(`^(\(.\) )?([0-9]{2,4}-[0-9]{2}-[0-9]{2} )?`)
+	// legacyMutationDateRe preserves replace/prepend's historical acceptance
+	// of two-to-four-digit years while the shared parser remains strict for
+	// Task.Date and canonical rendering.
+	legacyMutationDateRe = regexp.MustCompile(`^([0-9]{2,4}-[0-9]{2}-[0-9]{2})(?: |$)`)
 )

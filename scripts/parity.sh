@@ -170,7 +170,6 @@ check_no() { printf 'n' > "$WORK/stdin"; run_both "$@"; }
 # add
 check "add" add "pay the rent +home @errand"
 check "add alias" a "send the letter"
-check "add dated" -t add "buy milk"
 check "addm" addm "first line +p1 @c1
 second line +p2 @c2"
 

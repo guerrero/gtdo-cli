@@ -1,15 +1,15 @@
 # No action prints the usage text to stdout and exits 1.
 ! exec gtdo
-stdout 'Usage: gtdo \[-fhpantvV\] \[-d todo_config\] action \[task_number\] \[task_description\]'
+stdout 'Usage: gtdo \[-fhpanvV\] \[-d todo_config\] action \[task_number\] \[task_description\]'
 stdout 'Try ''gtdo -h'' for more information.'
 
 # An unknown action is a usage error too (cobra reports "unknown command").
 ! exec gtdo bogus
-stdout 'Usage: gtdo \[-fhpantvV\]'
+stdout 'Usage: gtdo \[-fhpanvV\]'
 
 # An unknown flag is a usage error.
 ! exec gtdo -q list
-stdout 'Usage: gtdo \[-fhpantvV\]'
+stdout 'Usage: gtdo \[-fhpanvV\]'
 
 # Flags are accepted only before the action; a trailing -p is a positional arg.
 # With list wired, `list -p` treats -p as an exclusion term over the empty
@@ -19,28 +19,28 @@ cmp stdout tail-p.want
 
 # -h forwards to shorthelp (exit 0), even with trailing garbage.
 exec gtdo -h bogus
-stdout '^  Usage: gtdo \[-fhpantvV\]'
+stdout '^  Usage: gtdo \[-fhpanvV\]'
 
 # -d at the end of the command line is a usage error (missing argument).
 ! exec gtdo -d
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 # --help is not a gtdo flag (todo.sh has no long options): unknown flag,
 # so usage text and exit 1. The pre-parser never lets cobra see it.
 ! exec gtdo --help
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 # A lone -- ends the flags; with nothing after it there is no action.
 ! exec gtdo --
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 # Flags without an action still fall through to usage (no default action).
 ! exec gtdo -p
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 # An unknown flag inside a cluster is a usage error too.
 ! exec gtdo -pq list
-stdout '^Usage: gtdo \[-fhpantvV\]'
+stdout '^Usage: gtdo \[-fhpanvV\]'
 
 -- tail-p.want --
 --
