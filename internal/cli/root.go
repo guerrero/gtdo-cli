@@ -80,6 +80,7 @@ func NewRootCmd(cfg *config.Config) *cobra.Command {
 
 	registerActions(root, cfg)
 	registerListingActions(root, cfg)
+	registerFormatAction(root, cfg)
 
 	return root
 }

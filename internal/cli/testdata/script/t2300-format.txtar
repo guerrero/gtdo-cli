@@ -1,0 +1,58 @@
+# The default order rewrites both configured files and removes done dates.
+exec gtdo format
+cmpenv stdout default.stdout
+cmp todo.txt default.todo
+cmp done.txt default.done
+
+# A custom template and an explicit relative file affect only that file.
+exec gtdo -d custom.toml format one.txt
+cmpenv stdout custom.stdout
+cmp one.txt custom.one
+cmp todo.txt default.todo
+
+# Quiet mode suppresses success messages while still rewriting successfully.
+env TODOTXT_VERBOSE=0
+exec gtdo -d custom.toml format one.txt
+stdout '^$'
+
+# Explicit targets must exist and only one target argument is accepted.
+! exec gtdo format missing.txt
+stderr 'TODO: File .*missing.txt does not exist\.'
+! exec gtdo format todo.txt done.txt
+stderr '^usage: gtdo format \[FILE\]$'
+
+# Invalid templates fail before any file is rewritten.
+! exec gtdo -d invalid.toml format
+stderr '^invalid task format: unknown field "unknown"$'
+cmp todo.txt default.todo
+
+-- todo.txt --
+(B) write report key:one +work @desk 20260808T143045.12Z
+
+plain item
+-- done.txt --
+x 2026-08-09 finish key:done +archive @desk 20260808T143045.12Z
+-- default.stdout --
+TODO: $HOME/todo.txt formatted.
+TODO: $HOME/done.txt formatted.
+-- default.todo --
+(B) 20260808T143045.12Z write report key:one +work @desk
+
+plain item
+-- default.done --
+x 20260808T143045.12Z finish key:done +archive @desk
+-- custom.toml --
+[paths]
+dir = "."
+
+[behavior]
+task_format = "[project][content][keywords][context][uuid][priority][checked]"
+-- one.txt --
+x 2026-08-08 finish key:done +archive @desk 20260808T143045.12Z
+-- custom.stdout --
+TODO: $HOME/one.txt formatted.
+-- custom.one --
++archive finish key:done @desk 20260808T143045.12Z x
+-- invalid.toml --
+[behavior]
+task_format = "[unknown]"
