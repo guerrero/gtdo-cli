@@ -20,8 +20,9 @@ migration checklist in ACTIONS.md.
   and file states byte for byte — treat them as the parity contract. The
   harness sets `TZ=UTC`, an isolated `HOME`, and `$ESC` for color tests.
 - Unit tests per package: `internal/todo` (parse, filters, sort, mutations,
-  pipeline), `internal/config` (resolution, precedence, TOML), `internal/ui`
-  (colors, padding, hide toggles).
+  pipeline), `internal/config` (resolution, precedence, strict JSON via
+  `encoding/json` with camelCase schema keys), `internal/ui` (colors, padding,
+  hide toggles).
 - The golden source for messages, prompts, and formats is
   `/tmp/todo.txt-cli/todo.sh`; when in doubt, run it and compare.
 

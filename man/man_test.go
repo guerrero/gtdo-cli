@@ -80,6 +80,22 @@ func TestManPageHasTheSectionsCobraDoesNotEmit(t *testing.T) {
 	}
 }
 
+func TestManPageDocumentsJSONConfig(t *testing.T) {
+	data, err := os.ReadFile("gtdo.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(data)
+	for _, want := range []string{"~/.config/gtdo/config.json", "/etc/gtdo/config.json"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("man/gtdo.1 is missing %q", want)
+		}
+	}
+	if strings.Contains(page, "config.toml") {
+		t.Error("man/gtdo.1 still documents config.toml")
+	}
+}
+
 // TestManPageDocumentsEveryExitCode pins the exit-status contract: gtdo
 // has exactly two exit codes, like todo.sh.
 func TestManPageDocumentsEveryExitCode(t *testing.T) {

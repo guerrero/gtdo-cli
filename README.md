@@ -54,21 +54,30 @@ lists the actions, `gtdo -V` prints the version block.
 
 ## Configuration
 
-gtdo reads `~/.config/gtdo/config.toml` (override with `-d PATH` or
-`$GTDO_CONFIG`). A missing file is not an error — every value has a default:
+gtdo searches `-d PATH`, `$GTDO_CONFIG`, `~/.config/gtdo/config.json`, then
+`/etc/gtdo/config.json`. JSON is a hard switch: gtdo only reads JSON
+configuration. A missing file is not an error — every value has a default:
 
-```toml
-[paths]
-dir = "~/todo"          # TODO_DIR
-
-[behavior]
-verbose = 1             # TODOTXT_VERBOSE
-force = false           # TODOTXT_FORCE
-task_format = "[checked][priority][uuid][content][keywords][project][context]"
+```json
+{
+  "dir": "~/todo",
+  "files": {
+    "todo": "~/todo/todo.txt",
+    "done": "~/todo/done.txt",
+    "report": "~/todo/report.txt"
+  },
+  "behaviour": {
+    "verbose": 1,
+    "force": false,
+    "preserveLineNumbers": true,
+    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]"
+  }
+}
 ```
 
+Unknown keys and `null` are errors; omitted settings retain their defaults.
 `gtdo format` rewrites both configured task files, while `gtdo format FILE`
-rewrites only the selected file. The `task_format` template supports
+rewrites only the selected file. The `taskFormat` template supports
 `[checked]`, `[priority]`, `[uuid]`, `[content]`, `[keywords]`, `[project]`,
 and `[context]` placeholders.
 
