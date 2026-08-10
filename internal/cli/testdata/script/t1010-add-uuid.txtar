@@ -9,21 +9,12 @@ cmp stdout legacy.want
 exec gtdo -d uuid.toml add '(a) priority task'
 cmp stdout priority.want
 
-exec gtdo -d uuid.toml addm eat apples
-cmp stdout addm1.want
-
-exec gtdo -d uuid.toml addm eat oranges
-cmp stdout addm2.want
-
-exec gtdo -d uuid.toml addm drink milk
-cmp stdout addm3.want
+exec sh -c 'gtdo -d uuid.toml addm "$(cat addm.txt)"'
+cmp stdout addm.want
 
 env GTDO_TEST_NOW=2009-02-13T04:40:59.990Z
-exec gtdo -d uuid.toml addm last second
-cmp stdout rollover1.want
-
-exec gtdo -d uuid.toml addm next second
-cmp stdout rollover2.want
+exec sh -c 'gtdo -d uuid.toml addm "$(cat rollover.txt)"'
+cmp stdout rollover.want
 
 exec gtdo -pd uuid.toml list
 cmp stdout list.want
@@ -49,29 +40,33 @@ TODO: 1 added.
 -- priority.want --
 2 (A) 20090213T044000.12Z priority task
 TODO: 2 added.
--- addm1.want --
+-- addm.txt --
+eat apples
+x done task
+drink milk
+-- addm.want --
 3 20090213T044000.13Z eat apples
 TODO: 3 added.
--- addm2.want --
-4 20090213T044000.14Z eat oranges
+4 x 20090213T044000.14Z done task
 TODO: 4 added.
--- addm3.want --
 5 20090213T044000.15Z drink milk
 TODO: 5 added.
--- rollover1.want --
+-- rollover.txt --
+last second
+next second
+-- rollover.want --
 6 20090213T044059.99Z last second
 TODO: 6 added.
--- rollover2.want --
 7 20090213T044100.00Z next second
 TODO: 7 added.
 -- list.want --
 2 (A) 20090213T044000.12Z priority task
 3 20090213T044000.13Z eat apples
-4 20090213T044000.14Z eat oranges
 5 20090213T044000.15Z drink milk
 6 20090213T044059.99Z last second
 7 20090213T044100.00Z next second
 1 legacy task
+4 x 20090213T044000.14Z done task
 --
 TODO: 7 of 7 tasks shown
 -- edit.want --
@@ -80,7 +75,7 @@ TODO: 7 of 7 tasks shown
 legacy task
 (A) 20090213T044000.12Z priority task today
 20090213T044000.13Z eat apples
-20090213T044000.14Z eat oranges
+x 20090213T044000.14Z done task
 20090213T044000.15Z drink milk
 20090213T044059.99Z last second
 20090213T044100.00Z next second
