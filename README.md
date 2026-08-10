@@ -6,13 +6,16 @@ gtdo is a Go port of [todo.txt-cli](https://github.com/todotxt/todo.txt-cli)'s
 
 ## Parity
 
-gtdo's goal is parity with todo.sh (todo.txt-cli v2.x): for the twenty-one
-in-scope actions it produces byte-identical stdout, stderr, exit codes, and
-file states. The in-scope actions are:
+gtdo's goal is parity with todo.sh (todo.txt-cli v2.x): for the twenty
+in-scope upstream actions it produces byte-identical stdout, stderr, exit
+codes, and file states. The in-scope upstream actions are:
 
-`add`, `addm`, `addto`, `append`, `archive`, `del`, `depri`, `do`, `format`, `help`,
+`add`, `addm`, `addto`, `append`, `archive`, `del`, `depri`, `do`, `help`,
 `list`, `listall`, `listcon`, `listpri`, `listproj`, `move`, `prepend`, `pri`,
 `replace`, `report`, `shorthelp`
+
+The `format` action is an additional gtdo extension rather than an upstream
+todo.sh parity action.
 
 Addons, `command`, `deduplicate`, and `listfile` are out of scope. The
 migration checklist lives in [ACTIONS.md](ACTIONS.md).

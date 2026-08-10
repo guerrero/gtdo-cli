@@ -47,7 +47,8 @@ British spelling; `colors` retains its existing American spelling.
     "verbose": 1,
     "defaultAction": "",
     "sourceVar": "",
-    "sentenceDelimiters": ",.:;"
+    "sentenceDelimiters": ",.:;",
+    "taskFormat": "[checked][priority][uuid][content][keywords][project][context]"
   },
   "colors": {
     "priA": "yellow",
@@ -127,7 +128,8 @@ support. No migration command or automatic converter is added.
 
 Config unit tests use JSON fixtures and cover:
 
-- the full camelCase schema;
+- the full camelCase schema, including the default and JSON-loaded
+  `taskFormat` value;
 - default, JSON, environment, and CLI precedence;
 - JSON search order and path expansion;
 - legacy `config.toml` default locations being ignored;

@@ -1,0 +1,24 @@
+[!unix] skip 'requires Unix file permissions'
+
+# A failure reading the second configured target leaves the first untouched.
+chmod 0200 preflight-done.txt
+! exec gtdo -d preflight.toml format
+stderr 'open preflight-done\.txt: permission denied'
+chmod 0644 preflight-done.txt
+cmp preflight-todo.txt preflight-todo.want
+cmp preflight-done.txt preflight-done.want
+
+-- preflight.toml --
+[paths]
+dir = "."
+todo_file = "preflight-todo.txt"
+done_file = "preflight-done.txt"
+report_file = "preflight-report.txt"
+-- preflight-todo.txt --
+@desk first task +work
+-- preflight-todo.want --
+@desk first task +work
+-- preflight-done.txt --
+@home second task +archive
+-- preflight-done.want --
+@home second task +archive

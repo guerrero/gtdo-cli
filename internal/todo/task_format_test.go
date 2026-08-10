@@ -73,6 +73,31 @@ func TestTaskFormatCustomOrderAndChecked(t *testing.T) {
 	}
 }
 
+func TestParseTaskFormatAllowsASCIIWhitespaceBetweenFields(t *testing.T) {
+	f := mustTaskFormat(t, "[project] \t\n [content]")
+	if got := f.FormatLine("write report +work"); got != "+work write report" {
+		t.Errorf("FormatLine = %q, want %q", got, "+work write report")
+	}
+}
+
+func TestTaskFormatExtractsPriorityAfterCheckedPrefix(t *testing.T) {
+	f := mustTaskFormat(t, defaultTaskFormat)
+	for _, tc := range []struct {
+		name string
+		line string
+		want string
+	}{
+		{name: "after checked marker", line: "x (B) write report", want: "x (B) write report"},
+		{name: "after completion date", line: "x 2026-08-08 (A) write report", want: "x (A) write report"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := f.FormatLine(tc.line); got != tc.want {
+				t.Errorf("FormatLine = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestTaskFormatOmitsMissingFieldsWithoutExtraSpaces(t *testing.T) {
 	f := mustTaskFormat(t, defaultTaskFormat)
 	if got := f.FormatLine("plain task"); got != "plain task" {

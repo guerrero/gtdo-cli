@@ -61,21 +61,20 @@ func actionFormat(cmd *cobra.Command, args []string, cfg *config.Config) error {
 		fmt.Fprintln(cmd.ErrOrStderr(), err)
 		return exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
 	}
+	if len(args) == 1 {
+		if msg := formatTargetError(targets[0]); msg != "" {
+			fmt.Fprintln(cmd.ErrOrStderr(), msg)
+			return exitcode.Wrap(exitcode.Generic, exitcode.ErrFailure)
+		}
+	}
 
 	s, err := newSession(cmd, cfg)
 	if err != nil {
 		return err
 	}
 	for _, path := range targets {
-		info, err := os.Stat(path)
-		if os.IsNotExist(err) {
-			return s.die(fmt.Sprintf("TODO: File %s does not exist.", path))
-		}
-		if err != nil {
-			return s.die(err.Error())
-		}
-		if !info.Mode().IsRegular() {
-			return s.die(fmt.Sprintf("TODO: File %s is not a regular file.", path))
+		if msg := formatTargetError(path); msg != "" {
+			return s.die(msg)
 		}
 	}
 
@@ -102,4 +101,18 @@ func actionFormat(cmd *cobra.Command, args []string, cfg *config.Config) error {
 		}
 	}
 	return nil
+}
+
+func formatTargetError(path string) string {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Sprintf("TODO: File %s does not exist.", path)
+	}
+	if err != nil {
+		return err.Error()
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Sprintf("TODO: File %s is not a regular file.", path)
+	}
+	return ""
 }

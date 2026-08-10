@@ -26,6 +26,33 @@ stderr '^usage: gtdo format \[FILE\]$'
 stderr '^invalid task format: unknown field "unknown"$'
 cmp todo.txt default.todo
 
+# An explicit configured target is validated before session setup can create it.
+env TODOTXT_VERBOSE=1
+! exec gtdo -d missing-configured.toml format missing.txt
+cmpenv stderr missing-configured.stderr
+! exists missing-configured/missing.txt
+! exists missing-configured/done.txt
+! exists missing-configured/report.txt
+
+# A configured directory reports the regular-file error without startup writes.
+mkdir configured-directory
+cp directory-child.want configured-directory/child.txt
+! exec gtdo -d directory.toml format configured-directory
+cmpenv stderr directory.stderr
+cmp configured-directory/child.txt directory-child.want
+cmp directory-peer.txt directory-peer.want
+! exists directory-report.txt
+
+# An absolute explicit target is kept unchanged rather than joined to TODO_DIR.
+exec gtdo -d absolute.toml format $WORK/absolute.txt
+cmpenv stdout absolute.stdout
+cmp absolute.txt absolute.want
+
+# Equal configured targets are formatted and reported only once.
+exec gtdo -d dedupe.toml format
+cmp stdout dedupe.stdout
+cmp same.txt same.want
+
 -- todo.txt --
 (B) write report key:one +work @desk 20260808T143045.12Z
 
@@ -56,3 +83,44 @@ TODO: $HOME/one.txt formatted.
 -- invalid.toml --
 [behavior]
 task_format = "[unknown]"
+-- missing-configured.toml --
+[paths]
+dir = "missing-configured"
+todo_file = "missing-configured/missing.txt"
+-- missing-configured.stderr --
+TODO: File $WORK/missing-configured/missing.txt does not exist.
+-- directory.toml --
+[paths]
+dir = "."
+todo_file = "configured-directory"
+done_file = "directory-peer.txt"
+report_file = "directory-report.txt"
+-- directory.stderr --
+TODO: File $WORK/configured-directory is not a regular file.
+-- directory-child.want --
+leave directory contents alone
+-- directory-peer.txt --
+@desk leave peer +work
+-- directory-peer.want --
+@desk leave peer +work
+-- absolute.toml --
+[paths]
+dir = "absolute-config"
+-- absolute.txt --
+@desk absolute task +work
+-- absolute.stdout --
+TODO: $WORK/absolute.txt formatted.
+-- absolute.want --
+absolute task +work @desk
+-- dedupe.toml --
+[paths]
+dir = "."
+todo_file = "same.txt"
+done_file = "same.txt"
+report_file = "same-report.txt"
+-- same.txt --
+@desk shared task +work
+-- dedupe.stdout --
+TODO: same.txt formatted.
+-- same.want --
+shared task +work @desk
