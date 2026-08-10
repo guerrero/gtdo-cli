@@ -456,7 +456,7 @@ type selectorChannelReader struct {
 	stop <-chan struct{}
 }
 
-func (r selectorChannelReader) ReadRune() rune {
+func (r selectorChannelReader) ReadSelectorKey() rune {
 	select {
 	case key := <-r.keys:
 		return key
@@ -650,7 +650,7 @@ func renderSelector(w io.Writer, state *selectorState) {
 // so we can distinguish a lone Esc and decode the small set of arrows needed
 // by the selector ourselves.
 type selectorRuneReader interface {
-	ReadRune() rune
+	ReadSelectorKey() rune
 }
 
 type selectorTimedRuneReader interface {
@@ -665,7 +665,7 @@ func readSelectorKey(terminal selectorRuneReader, pending **rune) rune {
 		*pending = nil
 		return key
 	}
-	key := terminal.ReadRune()
+	key := terminal.ReadSelectorKey()
 	if key != readline.CharEsc {
 		return key
 	}
@@ -697,6 +697,6 @@ func readSelectorRune(reader selectorRuneReader, timeout time.Duration) (rune, b
 	if timed, ok := reader.(selectorTimedRuneReader); ok {
 		return timed.ReadRuneTimeout(timeout)
 	}
-	key := reader.ReadRune()
+	key := reader.ReadSelectorKey()
 	return key, key != 0
 }

@@ -237,7 +237,7 @@ type selectorRuneReaderStub struct {
 	keys []rune
 }
 
-func (s *selectorRuneReaderStub) ReadRune() rune {
+func (s *selectorRuneReaderStub) ReadSelectorKey() rune {
 	if len(s.keys) == 0 {
 		return 0
 	}
