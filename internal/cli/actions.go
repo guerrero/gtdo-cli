@@ -141,6 +141,10 @@ type session struct {
 // created on demand, mirroring todo.sh's startup sanity checks (§6.5).
 func newSession(cmd *cobra.Command, cfg *config.Config) (*session, error) {
 	st := &todo.Store{
+		Policy: todo.SigilPolicy{
+			AllowedContexts: cfg.AllowedContexts,
+			AllowedProjects: cfg.AllowedProjects,
+		},
 		Dir:                 cfg.Dir,
 		TodoFile:            cfg.TodoFile,
 		DoneFile:            cfg.DoneFile,
