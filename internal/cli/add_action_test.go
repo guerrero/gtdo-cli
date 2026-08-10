@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
@@ -163,6 +164,56 @@ func TestSelectorStateEnterConfirmsSelection(t *testing.T) {
 	if got := state.model.Values(); len(got) != 1 || got[0] != "@home" {
 		t.Fatalf("selected values = %v, want [@home]", got)
 	}
+}
+
+func TestSelectorStateCtrlDIsCancellation(t *testing.T) {
+	state := newSelectorState([]string{"@home"})
+	if got := state.handle(readline.CharDelete); got != selectorCancel {
+		t.Fatalf("Ctrl-D action = %v, want cancellation", got)
+	}
+}
+
+func TestReadSelectorKeyDoesNotWaitForLoneEsc(t *testing.T) {
+	reader := &selectorRuneReaderStub{keys: []rune{readline.CharEsc}}
+	done := make(chan rune, 1)
+	go func() { done <- readSelectorKey(reader, nil) }()
+	select {
+	case got := <-done:
+		if got != readline.CharEsc {
+			t.Fatalf("readSelectorKey() = %d, want Esc", got)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("readSelectorKey waited for a second rune after Esc")
+	}
+}
+
+func TestRenderSelectorClearsPreviousFrame(t *testing.T) {
+	state := newSelectorState([]string{"@home", "@office"})
+	var rendered bytes.Buffer
+	renderSelector(&rendered, &state)
+	state.model.SetQuery("office")
+	renderSelector(&rendered, &state)
+	text := rendered.String()
+	if !strings.Contains(text, "\x1b[2A") {
+		t.Fatalf("redraw = %q, want cursor-up sequence", text)
+	}
+	lastFrame := text[strings.LastIndex(text, "\x1b[2A"):]
+	if strings.Contains(lastFrame, "@home") {
+		t.Fatalf("last frame = %q, contains stale filtered option", lastFrame)
+	}
+}
+
+type selectorRuneReaderStub struct {
+	keys []rune
+}
+
+func (s *selectorRuneReaderStub) ReadRune() rune {
+	if len(s.keys) == 0 {
+		return 0
+	}
+	key := s.keys[0]
+	s.keys = s.keys[1:]
+	return key
 }
 
 func TestCancelOrDieLeavesCancellationErrorsSilent(t *testing.T) {

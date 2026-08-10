@@ -89,6 +89,8 @@ cmp stdout help-vv.want
       Adds THING I NEED TO DO to your todo.txt file on its own line.
       Project and context notation optional.
       Quotes optional.
+      Interactive modes: -i|--interactive adds one editable task; -g|--guided runs metadata, project, and context phases.
+      Guided mode accepts repeatable --only metadata|project|context.
 
     addm "THINGS I NEED TO DO"
       Adds each line of THINGS I NEED TO DO to your todo.txt on its own line.

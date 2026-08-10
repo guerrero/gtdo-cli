@@ -7,6 +7,9 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/chzyer/readline"
 )
@@ -178,9 +181,21 @@ func (m *selectorModel) clampCursor(visible int) {
 type ttyAddInput struct {
 	session  *session
 	terminal *os.File
+	state    *ttyInputState
 }
 
-var _ addInput = ttyAddInput{}
+var _ addInput = (*ttyAddInput)(nil)
+
+type ttyInputState struct {
+	promptConfig *readline.Config
+	prompt       *readline.Instance
+	promptSource *os.File
+	promptInput  *readline.CancelableStdin
+	promptRaw    *readline.State
+	selectorStop chan struct{}
+	selectorPend *rune
+	close        sync.Once
+}
 
 // newAddInput selects the deterministic line protocol for pipes and tests and
 // the readline adapter only for an actual terminal file. Keeping the session's
@@ -189,7 +204,7 @@ var _ addInput = ttyAddInput{}
 func newAddInput(s *session, _ addCandidates) addInput {
 	if s != nil && stdinIsTTY(s.in) {
 		if terminal, ok := s.in.(*os.File); ok {
-			return ttyAddInput{session: s, terminal: terminal}
+			return &ttyAddInput{session: s, terminal: terminal}
 		}
 	}
 	if s == nil {
@@ -201,46 +216,124 @@ func newAddInput(s *session, _ addCandidates) addInput {
 	return lineAddInput{reader: s.reader}
 }
 
-// readlineConfig builds a fresh config for every prompt/selector. Readline's
-// defaults target process stdin, while Cobra actions may receive another file,
-// so raw-mode closures explicitly use the session terminal descriptor.
-func (t ttyAddInput) readlineConfig(prompt string, completer readline.AutoCompleter, vimMode bool) *readline.Config {
-	var state *readline.State
-	fd := int(t.terminal.Fd())
-	return &readline.Config{
-		Prompt:                 prompt,
+// ensurePrompt creates one readline instance for the complete prompt portion
+// of an add session. Its terminal owns a buffered input reader; keeping that
+// boundary alive across prompts preserves typeahead (including pasted guided
+// phase lines) instead of discarding bytes when a per-prompt instance closes.
+func (t *ttyAddInput) ensureTerminal() (*ttyInputState, error) {
+	if t.state != nil {
+		return t.state, nil
+	}
+	state := &ttyInputState{}
+	source, err := duplicateTTY(t.terminal)
+	if err != nil {
+		return nil, err
+	}
+	state.promptSource = source
+	state.promptInput = readline.NewCancelableStdin(source)
+	state.promptConfig = t.newConfig(state.promptInput, int(source.Fd()), func() *readline.State {
+		return state.promptRaw
+	}, func(raw *readline.State) {
+		state.promptRaw = raw
+	})
+	state.prompt, err = readline.NewEx(state.promptConfig)
+	if err != nil {
+		_ = state.promptInput.Close()
+		_ = source.Close()
+		return nil, err
+	}
+	t.state = state
+	return state, nil
+}
+
+// newConfig supplies explicit terminal callbacks so tests can run readline
+// against a duplicated PTY descriptor without touching Cobra's stdin.
+func (t *ttyAddInput) newConfig(source io.ReadCloser, fd int, raw func() *readline.State, setRaw func(*readline.State)) *readline.Config {
+	config := &readline.Config{
+		Prompt:                 "",
 		HistoryFile:            "",
 		HistoryLimit:           -1,
 		DisableAutoSaveHistory: true,
-		AutoComplete:           completer,
-		Stdin:                  t.terminal,
+		Stdin:                  source,
 		Stdout:                 t.session.errw,
 		Stderr:                 t.session.errw,
-		VimMode:                vimMode,
+		Painter:                ttyPainter{},
+		VimMode:                false,
 		FuncIsTerminal:         func() bool { return true },
 		FuncMakeRaw: func() error {
-			var err error
-			state, err = readline.MakeRaw(fd)
+			if raw() != nil {
+				return nil
+			}
+			rawState, err := readline.MakeRaw(fd)
+			if err == nil {
+				setRaw(rawState)
+			}
 			return err
 		},
 		FuncExitRaw: func() error {
-			if state == nil {
+			rawState := raw()
+			if rawState == nil {
 				return nil
 			}
-			err := readline.Restore(fd, state)
-			state = nil
+			err := readline.Restore(fd, rawState)
+			setRaw(nil)
 			return err
 		},
 		FuncGetWidth:       func() int { return 80 },
 		FuncOnWidthChanged: func(func()) {},
 	}
+	return config
+}
+
+type ttyPainter struct{}
+
+func (ttyPainter) Paint(line []rune, _ int) []rune { return line }
+
+func duplicateTTY(file *os.File) (*os.File, error) {
+	fd, err := syscall.Dup(int(file.Fd()))
+	if err != nil {
+		return nil, err
+	}
+	return os.NewFile(uintptr(fd), file.Name()), nil
+}
+
+// Close restores raw mode and stops readline's input goroutine. A
+// CancelableStdin is closed before its duplicated descriptor so a blocked PTY
+// read is interrupted without closing Cobra's original stdin file.
+func (t *ttyAddInput) Close() error {
+	if t == nil || t.state == nil {
+		return nil
+	}
+	var err error
+	t.state.close.Do(func() {
+		if t.state.promptRaw != nil && t.state.prompt != nil {
+			if rawErr := t.state.prompt.Terminal.ExitRawMode(); err == nil {
+				err = rawErr
+			}
+		}
+		if t.state.selectorStop != nil {
+			close(t.state.selectorStop)
+			t.state.selectorStop = nil
+		}
+		if t.state.promptSource != nil {
+			if t.state.promptInput != nil {
+				_ = t.state.promptInput.Close()
+			}
+			_ = t.state.promptSource.Close()
+		}
+		if t.state.prompt != nil {
+			if closeErr := t.state.prompt.Close(); err == nil {
+				err = closeErr
+			}
+		}
+	})
+	return err
 }
 
 // PromptTask reads the final task line with inline @context/+project
-// completion. A readline instance is short-lived so add never persists
-// history and terminal state is restored even when Readline returns EOF or
-// Ctrl-C.
-func (t ttyAddInput) PromptTask(candidates addCandidates) (string, error) {
+// completion. The shared readline instance keeps typeahead available for
+// subsequent guided phases while history remains disabled.
+func (t *ttyAddInput) PromptTask(candidates addCandidates) (string, error) {
 	line, err := t.readline("Add: ", addCompleter{Candidates: candidates})
 	return line, err
 }
@@ -249,7 +342,7 @@ func (t ttyAddInput) PromptTask(candidates addCandidates) (string, error) {
 // phase; an empty value skips that key and returns to the key prompt. Existing
 // keys and values complete through readline, while custom entries remain
 // supported after the completion list is exhausted.
-func (t ttyAddInput) PromptMetadata(candidates addCandidates) ([]string, error) {
+func (t *ttyAddInput) PromptMetadata(candidates addCandidates) ([]string, error) {
 	keys := make([]string, 0, len(candidates.Metadata))
 	valuesByKey := make(map[string][]string, len(candidates.Metadata))
 	for _, candidate := range candidates.Metadata {
@@ -287,49 +380,107 @@ func (t ttyAddInput) PromptMetadata(candidates addCandidates) ([]string, error) 
 // Select runs the raw searchable multi-select list for a project or context
 // phase. The selector is terminal-independent at the state level, while this
 // method owns rendering, key decoding, and raw-mode restoration.
-func (t ttyAddInput) Select(_ guidedPhase, options []string) ([]string, error) {
-	config := t.readlineConfig("", nil, true)
-	terminal, err := readline.NewTerminal(config)
+func (t *ttyAddInput) Select(_ guidedPhase, options []string) ([]string, error) {
+	state, err := t.ensureTerminal()
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = terminal.Close() }()
+	if state.prompt == nil {
+		return nil, io.EOF
+	}
+	keys := make(chan rune, 32)
+	stop := make(chan struct{})
+	state.selectorStop = stop
+	previous := state.prompt.Config.Clone()
+	selectorConfig := state.prompt.Config.Clone()
+	selectorConfig.Prompt = ""
+	selectorConfig.AutoComplete = nil
+	selectorConfig.VimMode = true
+	selectorConfig.FuncFilterInputRune = func(key rune) (rune, bool) {
+		select {
+		case keys <- key:
+			// Let readline's operation observe EOF itself; filtering rune(0)
+			// would otherwise make its goroutine spin on a closed terminal.
+			return 0, key == 0
+		case <-stop:
+			return 0, false
+		}
+	}
+	state.prompt.SetConfig(selectorConfig)
+	terminal := state.prompt.Terminal
 	if err := terminal.EnterRawMode(); err != nil {
+		state.prompt.SetConfig(previous)
+		close(stop)
+		state.selectorStop = nil
 		return nil, err
 	}
-	defer func() { _ = terminal.ExitRawMode() }()
+	defer func() {
+		_ = terminal.ExitRawMode()
+		close(stop)
+		state.selectorStop = nil
+		previous.VimMode = false
+		previous.FuncFilterInputRune = nil
+		state.prompt.SetConfig(previous)
+		terminal.KickRead()
+	}()
 
-	state := newSelectorState(options)
+	selector := newSelectorState(options)
 	fmt.Fprintln(t.session.errw, selectorHelp)
-	renderSelector(t.session.errw, state)
+	renderSelector(t.session.errw, &selector)
 	terminal.KickRead()
-	var pending *rune
+	reader := selectorChannelReader{keys: keys, stop: stop}
 	for {
-		key := readSelectorKey(terminal, &pending)
+		key := readSelectorKey(reader, &state.selectorPend)
 		if key == 0 {
 			return nil, io.EOF
 		}
-		action := state.handle(key)
+		action := selector.handle(key)
 		switch action {
 		case selectorConfirm:
-			return state.model.Values(), nil
+			return selector.model.Values(), nil
 		case selectorExit:
 			return nil, nil
 		case selectorCancel:
 			return nil, &readline.InterruptError{}
 		}
-		renderSelector(t.session.errw, state)
+		renderSelector(t.session.errw, &selector)
 		terminal.KickRead()
 	}
 }
 
-func (t ttyAddInput) readline(prompt string, completer readline.AutoCompleter) (string, error) {
-	instance, err := readline.NewEx(t.readlineConfig(prompt, completer, false))
+// selectorChannelReader receives runes from readline's one background
+// operation. It keeps the terminal's buffered input boundary intact while
+// allowing the selector state machine to consume keys independently.
+type selectorChannelReader struct {
+	keys <-chan rune
+	stop <-chan struct{}
+}
+
+func (r selectorChannelReader) ReadRune() rune {
+	select {
+	case key := <-r.keys:
+		return key
+	case <-r.stop:
+		return 0
+	}
+}
+
+func (t *ttyAddInput) readline(prompt string, completer readline.AutoCompleter) (string, error) {
+	state, err := t.ensureTerminal()
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = instance.Close() }()
-	return instance.Readline()
+	if state.prompt == nil {
+		return "", io.EOF
+	}
+	state.prompt.SetPrompt(prompt)
+	state.prompt.SetVimMode(false)
+	config := state.prompt.Config.Clone()
+	config.Prompt = prompt
+	config.AutoComplete = completer
+	config.VimMode = false
+	state.prompt.SetConfig(config)
+	return state.prompt.Readline()
 }
 
 // stringCompleter offers suffixes for metadata key/value tokens. Unlike the
@@ -396,8 +547,9 @@ const (
 )
 
 type selectorState struct {
-	model     selectorModel
-	queryMode bool
+	model         selectorModel
+	queryMode     bool
+	renderedLines int
 }
 
 func newSelectorState(options []string) selectorState {
@@ -435,7 +587,7 @@ func (s *selectorState) handle(key rune) selectorAction {
 		}
 		s.queryMode = false
 		return selectorExit
-	case readline.CharInterrupt:
+	case readline.CharInterrupt, readline.CharDelete:
 		return selectorCancel
 	default:
 		if s.queryMode && readline.IsPrintable(key) {
@@ -445,12 +597,9 @@ func (s *selectorState) handle(key rune) selectorAction {
 	return selectorContinue
 }
 
-func renderSelector(w io.Writer, state selectorState) {
-	// Clear the previous selector frame. The output is intentionally kept on
-	// stderr with readline's normal prompt stream; non-TTY adapters never call
-	// this path and therefore emit no escape sequences.
-	fmt.Fprint(w, "\r\033[2K")
+func renderSelector(w io.Writer, state *selectorState) {
 	visible := state.model.Visible()
+	lines := make([]string, 0, len(visible)+1)
 	for i, option := range visible {
 		marker := "[ ]"
 		if state.model.Selected[option] {
@@ -460,11 +609,26 @@ func renderSelector(w io.Writer, state selectorState) {
 		if i == state.model.Cursor {
 			cursor = "> "
 		}
-		fmt.Fprintf(w, "\033[2K%s%s %s\n", cursor, marker, option)
+		lines = append(lines, fmt.Sprintf("%s%s %s", cursor, marker, option))
 	}
 	if state.queryMode {
-		fmt.Fprintf(w, "/%s", state.model.Query)
+		lines = append(lines, "/"+state.model.Query)
 	}
+	if state.renderedLines > 0 {
+		fmt.Fprintf(w, "\033[%dA", state.renderedLines)
+	}
+	lineCount := state.renderedLines
+	if len(lines) > lineCount {
+		lineCount = len(lines)
+	}
+	for i := 0; i < lineCount; i++ {
+		fmt.Fprint(w, "\r\033[2K")
+		if i < len(lines) {
+			fmt.Fprint(w, lines[i])
+		}
+		fmt.Fprint(w, "\n")
+	}
+	state.renderedLines = lineCount
 }
 
 // readSelectorKey decodes arrow escape sequences while keeping a plain Esc
@@ -472,8 +636,14 @@ func renderSelector(w io.Writer, state selectorState) {
 // the prefix of an escape sequence; VimMode is enabled for this raw terminal
 // so we can distinguish a lone Esc and decode the small set of arrows needed
 // by the selector ourselves.
-func readSelectorKey(terminal *readline.Terminal, pending **rune) rune {
-	if *pending != nil {
+type selectorRuneReader interface {
+	ReadRune() rune
+}
+
+const selectorEscapeWait = 20 * time.Millisecond
+
+func readSelectorKey(terminal selectorRuneReader, pending **rune) rune {
+	if pending != nil && *pending != nil {
 		key := **pending
 		*pending = nil
 		return key
@@ -482,15 +652,20 @@ func readSelectorKey(terminal *readline.Terminal, pending **rune) rune {
 	if key != readline.CharEsc {
 		return key
 	}
-	next := terminal.ReadRune()
-	if next == 0 {
+	next, ok := readSelectorRune(terminal, selectorEscapeWait)
+	if !ok {
 		return key
 	}
 	if next != '[' && next != 'O' {
-		*pending = &next
+		if pending != nil {
+			*pending = &next
+		}
 		return key
 	}
-	final := terminal.ReadRune()
+	final, ok := readSelectorRune(terminal, selectorEscapeWait)
+	if !ok {
+		return key
+	}
 	switch final {
 	case 'A':
 		return readline.CharPrev
@@ -498,5 +673,16 @@ func readSelectorKey(terminal *readline.Terminal, pending **rune) rune {
 		return readline.CharNext
 	default:
 		return final
+	}
+}
+
+func readSelectorRune(reader selectorRuneReader, timeout time.Duration) (rune, bool) {
+	result := make(chan rune, 1)
+	go func() { result <- reader.ReadRune() }()
+	select {
+	case key := <-result:
+		return key, key != 0
+	case <-time.After(timeout):
+		return 0, false
 	}
 }

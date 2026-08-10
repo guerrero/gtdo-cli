@@ -1,10 +1,23 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/guerrero/gtdo/internal/config"
 )
+
+func TestAddHelpMentionsInteractiveModes(t *testing.T) {
+	root := NewRootCmd(&config.Config{})
+	add, _, _ := root.Find([]string{"add"})
+	for _, text := range []string{"-i", "--interactive", "-g", "--guided", "--only"} {
+		if !strings.Contains(add.Long, text) {
+			t.Errorf("add help = %q, missing %q", add.Long, text)
+		}
+	}
+}
 
 // TestActionUsageLines pins the help-block seam Tasks 7-8 build on: a
 // command's usage lines are its Use line plus one line per alias, and

@@ -39,6 +39,9 @@ func actionAdd(cmd *cobra.Command, args []string, cfg *config.Config) error {
 
 	candidates := collectAddCandidates(cfg)
 	input := newAddInput(s, candidates)
+	if closer, ok := input.(interface{ Close() error }); ok {
+		defer func() { _ = closer.Close() }()
+	}
 	var text string
 	if opts.Mode == addModeInteractive {
 		text, err = input.PromptTask(candidates)
