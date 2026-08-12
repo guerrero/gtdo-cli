@@ -11,6 +11,7 @@ import (
 
 type fakeAddInput struct {
 	task       string
+	priority   string
 	metadata   []string
 	selections map[guidedPhase][]string
 	calls      []guidedPhase
@@ -19,6 +20,11 @@ type fakeAddInput struct {
 
 func (f *fakeAddInput) PromptTask(addCandidates) (string, error) {
 	return f.task, nil
+}
+
+func (f *fakeAddInput) PromptPriority(addCandidates) (string, error) {
+	f.calls = append(f.calls, phasePriority)
+	return f.priority, nil
 }
 
 func (f *fakeAddInput) PromptMetadata(addCandidates) ([]string, error) {
@@ -240,6 +246,83 @@ func TestLineAddInputRejectsMalformedMetadataLine(t *testing.T) {
 				t.Fatalf("PromptMetadata(%q) succeeded, want malformed-line error", line)
 			}
 		})
+	}
+}
+
+func TestLineAddInputReadsPriorityLine(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\nb\n"))}
+	if _, err := input.PromptTask(addCandidates{}); err != nil {
+		t.Fatal(err)
+	}
+	priority, err := input.PromptPriority(addCandidates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if priority != "b" {
+		t.Fatalf("priority = %q, want b", priority)
+	}
+}
+
+func TestLineAddInputSkipsEmptyPriority(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\n\n"))}
+	if _, err := input.PromptTask(addCandidates{}); err != nil {
+		t.Fatal(err)
+	}
+	priority, err := input.PromptPriority(addCandidates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if priority != "" {
+		t.Fatalf("priority = %q, want empty", priority)
+	}
+}
+
+func TestLineAddInputRejectsInvalidPriority(t *testing.T) {
+	for _, line := range []string{"high", "(A)", "AB", "1", "é"} {
+		t.Run(line, func(t *testing.T) {
+			input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\n" + line + "\n"))}
+			if _, err := input.PromptTask(addCandidates{}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := input.PromptPriority(addCandidates{}); err == nil {
+				t.Fatalf("PromptPriority(%q) succeeded, want invalid-priority error", line)
+			}
+		})
+	}
+}
+
+func TestLineAddInputPropagatesPriorityEOF(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\n"))}
+	if _, err := input.PromptTask(addCandidates{}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := input.PromptPriority(addCandidates{})
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("PromptPriority() error = %v, want io.EOF", err)
+	}
+	if got != "" {
+		t.Fatalf("PromptPriority() = %q, want empty on EOF", got)
+	}
+}
+
+func TestParseGuidedPriority(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"", ""},
+		{"a", "a"},
+		{"Z", "Z"},
+	} {
+		got, err := parseGuidedPriority(tc.in)
+		if err != nil {
+			t.Fatalf("parseGuidedPriority(%q): %v", tc.in, err)
+		}
+		if got != tc.want {
+			t.Fatalf("parseGuidedPriority(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+	for _, line := range []string{"high", "(A)", "AB", "1", "é"} {
+		if _, err := parseGuidedPriority(line); err == nil {
+			t.Fatalf("parseGuidedPriority(%q) succeeded, want error", line)
+		}
 	}
 }
 

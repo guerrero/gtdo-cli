@@ -335,6 +335,17 @@ func (t *ttyAddInput) PromptTask(candidates addCandidates) (string, error) {
 	return line, err
 }
 
+// PromptPriority asks for a single priority letter. An empty line skips the
+// phase; the shared validator rejects anything that is not one letter. No
+// completion is offered: the letter set is tiny and typed directly.
+func (t *ttyAddInput) PromptPriority(addCandidates) (string, error) {
+	line, err := t.readline("Priority (A-Z, empty to skip): ", stringCompleter{})
+	if err != nil {
+		return "", err
+	}
+	return parseGuidedPriority(line)
+}
+
 // PromptMetadata gathers zero or more key:value pairs. Empty keys finish the
 // phase; an empty value skips that key and returns to the key prompt. Existing
 // keys and values complete through readline, while custom entries remain

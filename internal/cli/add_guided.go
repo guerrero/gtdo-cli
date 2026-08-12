@@ -18,6 +18,7 @@ import (
 // terminal or scripted input implementations.
 type addInput interface {
 	PromptTask(addCandidates) (string, error)
+	PromptPriority(addCandidates) (string, error)
 	PromptMetadata(addCandidates) ([]string, error)
 	Select(guidedPhase, []string) ([]string, error)
 }
@@ -127,6 +128,16 @@ func (l lineAddInput) PromptTask(addCandidates) (string, error) {
 	return line, nil
 }
 
+// PromptPriority consumes one priority line. The shared validator accepts
+// an empty line (skip) or a single ASCII letter.
+func (l lineAddInput) PromptPriority(addCandidates) (string, error) {
+	line, err := l.readLineErr()
+	if err != nil {
+		return "", err
+	}
+	return parseGuidedPriority(line)
+}
+
 func (l lineAddInput) PromptMetadata(addCandidates) ([]string, error) {
 	var metadata []string
 	for {
@@ -216,6 +227,22 @@ func validateMetadataLine(line string) error {
 		return fmt.Errorf("invalid metadata %q: expected key:value", line)
 	}
 	return nil
+}
+
+// parseGuidedPriority validates a guided priority line: empty, or a single
+// ASCII letter. The letter is returned as typed; composition uppercases it.
+func parseGuidedPriority(line string) (string, error) {
+	if line == "" {
+		return "", nil
+	}
+	if len(line) != 1 || !isASCIILetter(line[0]) {
+		return "", fmt.Errorf("invalid priority %q: expected a single letter A-Z", line)
+	}
+	return line, nil
+}
+
+func isASCIILetter(char byte) bool {
+	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z')
 }
 
 func isASCIIAlphaNumeric(char rune) bool {
