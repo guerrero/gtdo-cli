@@ -40,6 +40,13 @@ cmp stderr invalid.stderr.want
 cmp todo.txt existing-priority.todo.want
 cmp done.txt done.want
 
+stdin invalid-priority.in
+! exec status1 gtdo add -g
+cmp stdout empty.want
+cmp stderr invalid-priority.stderr.want
+cmp todo.txt existing-priority.todo.want
+cmp done.txt done.want
+
 -- todo.txt --
 current @home +gtdo due:today
 -- done.txt --
@@ -111,4 +118,9 @@ quick check @home @phone
 old @phone +legacy status:done
 -- invalid.stderr.want --
 usage: gtdo add [-i|--interactive|-g|--guided] [--only priority|context|project|metadata]
+-- invalid-priority.in --
+broken task
+!
+-- invalid-priority.stderr.want --
+invalid priority "!": expected a single letter A-Z
 -- empty.want --

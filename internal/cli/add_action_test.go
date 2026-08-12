@@ -49,6 +49,74 @@ func TestActionAddGuidedUsesStoreOnce(t *testing.T) {
 	}
 }
 
+func TestActionAddGuidedEmptyPriorityUsesConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &config.Config{
+		Dir:           dir,
+		TodoFile:      filepath.Join(dir, "todo.txt"),
+		DoneFile:      filepath.Join(dir, "done.txt"),
+		ReportFile:    filepath.Join(dir, "report.txt"),
+		Verbose:       1,
+		PriorityOnAdd: "C",
+	}
+	cmd := &cobra.Command{}
+	cmd.SetIn(strings.NewReader("task\n\n\n\n\n"))
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+
+	if err := actionAdd(cmd, []string{"--guided"}, cfg); err != nil {
+		t.Fatalf("actionAdd: %v", err)
+	}
+	got, err := os.ReadFile(cfg.TodoFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "(C) task\n" {
+		t.Fatalf("todo.txt = %q, want (C) task", got)
+	}
+	if got := stdout.String(); got != "1 (C) task\nTODO: 1 added.\n" {
+		t.Fatalf("stdout = %q, want 1 (C) task", got)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestActionAddGuidedPrioritySuppressesConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &config.Config{
+		Dir:           dir,
+		TodoFile:      filepath.Join(dir, "todo.txt"),
+		DoneFile:      filepath.Join(dir, "done.txt"),
+		ReportFile:    filepath.Join(dir, "report.txt"),
+		Verbose:       1,
+		PriorityOnAdd: "C",
+	}
+	cmd := &cobra.Command{}
+	cmd.SetIn(strings.NewReader("task\nb\n\n\n\n"))
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+
+	if err := actionAdd(cmd, []string{"--guided"}, cfg); err != nil {
+		t.Fatalf("actionAdd: %v", err)
+	}
+	got, err := os.ReadFile(cfg.TodoFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "(B) task\n" {
+		t.Fatalf("todo.txt = %q, want (B) task", got)
+	}
+	if got := stdout.String(); got != "1 (B) task\nTODO: 1 added.\n" {
+		t.Fatalf("stdout = %q, want 1 (B) task", got)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
 func TestActionAddModeErrorsDoNotEnsureFiles(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &config.Config{

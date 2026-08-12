@@ -139,8 +139,9 @@ func appendGuidedToken(text, token string) string {
 // lineAddInput implements guided's non-TTY protocol:
 //
 //   - one task line;
-//   - metadata key:value lines terminated by an empty line;
-//   - one project line and one context line of space-separated selections.
+//   - one priority line (empty to skip);
+//   - one context line and one project line of space-separated selections;
+//   - metadata key:value lines terminated by an empty line.
 //
 // It receives a buffered reader from the session so successive phases never
 // discard bytes prefetched by an earlier read.

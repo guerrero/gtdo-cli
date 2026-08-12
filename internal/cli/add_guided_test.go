@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 	"strings"
@@ -359,6 +360,8 @@ func TestLineAddInputRejectsInvalidPriority(t *testing.T) {
 			}
 			if _, err := input.PromptPriority(addCandidates{}); err == nil {
 				t.Fatalf("PromptPriority(%q) succeeded, want invalid-priority error", line)
+			} else if got := err.Error(); got != fmt.Sprintf("invalid priority %q: expected a single letter A-Z", line) {
+				t.Fatalf("PromptPriority(%q) error = %q, want %q", line, got, fmt.Sprintf("invalid priority %q: expected a single letter A-Z", line))
 			}
 		})
 	}
@@ -393,8 +396,12 @@ func TestParseGuidedPriority(t *testing.T) {
 		}
 	}
 	for _, line := range []string{"high", "(A)", "AB", "1", "é"} {
-		if _, err := parseGuidedPriority(line); err == nil {
+		_, err := parseGuidedPriority(line)
+		if err == nil {
 			t.Fatalf("parseGuidedPriority(%q) succeeded, want error", line)
+		}
+		if got := err.Error(); got != fmt.Sprintf("invalid priority %q: expected a single letter A-Z", line) {
+			t.Fatalf("parseGuidedPriority(%q) error = %q, want %q", line, got, fmt.Sprintf("invalid priority %q: expected a single letter A-Z", line))
 		}
 	}
 }
