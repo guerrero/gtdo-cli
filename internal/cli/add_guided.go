@@ -24,16 +24,28 @@ type addInput interface {
 }
 
 // runGuided gathers the base task and each enabled optional phase in the
-// stable metadata, project, context order before composing one final line.
+// stable priority, context, project, metadata order before composing one
+// final line. The priority phase is skipped when the base task already
+// carries a priority, mirroring the duplicate-sigil rule.
 func runGuided(input addInput, candidates addCandidates, opts addOptions) (string, error) {
 	base, err := input.PromptTask(candidates)
 	if err != nil {
 		return "", err
 	}
 
-	var metadata, projects, contexts []string
-	if opts.phaseEnabled(phaseMetadata) {
-		metadata, err = input.PromptMetadata(candidates)
+	var priority string
+	if opts.phaseEnabled(phasePriority) {
+		if _, has := (todo.Task{Text: base}).Priority(); !has {
+			priority, err = input.PromptPriority(candidates)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	var contexts, projects, metadata []string
+	if opts.phaseEnabled(phaseContext) {
+		contexts, err = input.Select(phaseContext, candidates.Contexts)
 		if err != nil {
 			return "", err
 		}
@@ -44,38 +56,25 @@ func runGuided(input addInput, candidates addCandidates, opts addOptions) (strin
 			return "", err
 		}
 	}
-	if opts.phaseEnabled(phaseContext) {
-		contexts, err = input.Select(phaseContext, candidates.Contexts)
+	if opts.phaseEnabled(phaseMetadata) {
+		metadata, err = input.PromptMetadata(candidates)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	return composeGuidedTask(base, metadata, projects, contexts), nil
+	return composeGuidedTask(base, priority, contexts, projects, metadata), nil
 }
 
-// composeGuidedTask appends non-empty metadata, project, and context groups
-// with one separator at each boundary. Existing exact sigil words in base are
-// retained and are not appended a second time.
-func composeGuidedTask(base string, metadata, projects, contexts []string) string {
+// composeGuidedTask prepends a non-empty priority, then appends non-empty
+// context, project, and metadata groups with one separator at each boundary.
+// Existing exact sigil words in base are retained and are not appended a
+// second time; runGuided guarantees the base carries no priority when one
+// is passed here.
+func composeGuidedTask(base, priority string, contexts, projects, metadata []string) string {
 	text := base
-	for _, pair := range metadata {
-		text = appendGuidedToken(text, pair)
-	}
-
-	projectSet := make(map[string]struct{})
-	for _, project := range (todo.Task{Text: base}).Projects() {
-		projectSet[project] = struct{}{}
-	}
-	for _, project := range sortedGuidedTokens(projects) {
-		if project == "" {
-			continue
-		}
-		if _, exists := projectSet[project]; exists {
-			continue
-		}
-		projectSet[project] = struct{}{}
-		text = appendGuidedToken(text, project)
+	if priority != "" {
+		text = prependGuidedToken(text, "("+strings.ToUpper(priority)+")")
 	}
 
 	contextSet := make(map[string]struct{})
@@ -93,7 +92,38 @@ func composeGuidedTask(base string, metadata, projects, contexts []string) strin
 		text = appendGuidedToken(text, context)
 	}
 
+	projectSet := make(map[string]struct{})
+	for _, project := range (todo.Task{Text: base}).Projects() {
+		projectSet[project] = struct{}{}
+	}
+	for _, project := range sortedGuidedTokens(projects) {
+		if project == "" {
+			continue
+		}
+		if _, exists := projectSet[project]; exists {
+			continue
+		}
+		projectSet[project] = struct{}{}
+		text = appendGuidedToken(text, project)
+	}
+
+	for _, pair := range metadata {
+		text = appendGuidedToken(text, pair)
+	}
+
 	return text
+}
+
+// prependGuidedToken joins token before text with one separator; an empty
+// either side returns the other side unchanged.
+func prependGuidedToken(text, token string) string {
+	if token == "" {
+		return text
+	}
+	if text == "" {
+		return token
+	}
+	return token + " " + text
 }
 
 func appendGuidedToken(text, token string) string {

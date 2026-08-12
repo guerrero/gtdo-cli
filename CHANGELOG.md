@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   formatted as `YYYYMMDDTHHMMSS.nnZ`. IDs advance in 10 ms steps when a
   collision is detected and remain stable through edits and moves.
 
+- Guided `add -g` now asks for an optional priority (`--only priority`) and
+  runs its phases in task, priority, context, project, metadata order.
+
 ### Changed
 
 - Replaced TOML configuration with a strict camelCase JSON format at

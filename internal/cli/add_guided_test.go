@@ -44,10 +44,11 @@ func (f *fakeAddInput) Select(phase guidedPhase, options []string) ([]string, er
 func TestRunGuidedRunsSelectedPhasesInOrder(t *testing.T) {
 	input := &fakeAddInput{
 		task:     "Call team @home",
+		priority: "A",
 		metadata: []string{"due:tomorrow"},
 		selections: map[guidedPhase][]string{
-			phaseProject: {"+gtdo"},
 			phaseContext: {"@phone", "@home"},
+			phaseProject: {"+gtdo"},
 		},
 	}
 
@@ -55,12 +56,12 @@ func TestRunGuidedRunsSelectedPhasesInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "Call team @home due:tomorrow +gtdo @phone"
+	want := "(A) Call team @home @phone +gtdo due:tomorrow"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
-	if !reflect.DeepEqual(input.calls, []guidedPhase{phaseMetadata, phaseProject, phaseContext}) {
-		t.Fatalf("calls = %v, want metadata, project, context", input.calls)
+	if !reflect.DeepEqual(input.calls, []guidedPhase{phasePriority, phaseContext, phaseProject, phaseMetadata}) {
+		t.Fatalf("calls = %v, want priority, context, project, metadata", input.calls)
 	}
 }
 
@@ -88,54 +89,112 @@ func TestRunGuidedRunsOnlySelectedPhaseAfterTask(t *testing.T) {
 	}
 }
 
+func TestRunGuidedSkipsPriorityWhenBaseHasOne(t *testing.T) {
+	input := &fakeAddInput{
+		task:     "(B) Call team",
+		priority: "A",
+		metadata: []string{"due:tomorrow"},
+		selections: map[guidedPhase][]string{
+			phaseContext: {"@home"},
+		},
+	}
+
+	got, err := runGuided(input, addCandidates{}, addOptions{Mode: addModeGuided})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "(B) Call team @home due:tomorrow" {
+		t.Fatalf("got %q, want %q", got, "(B) Call team @home due:tomorrow")
+	}
+	if !reflect.DeepEqual(input.calls, []guidedPhase{phaseContext, phaseProject, phaseMetadata}) {
+		t.Fatalf("calls = %v, want context, project, metadata", input.calls)
+	}
+}
+
+func TestRunGuidedOnlyPrioritySkipsWhenBaseHasOne(t *testing.T) {
+	input := &fakeAddInput{task: "(B) Call team", priority: "A"}
+
+	got, err := runGuided(input, addCandidates{}, addOptions{
+		Mode: addModeGuided,
+		Only: map[guidedPhase]bool{phasePriority: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "(B) Call team" {
+		t.Fatalf("got %q, want %q", got, "(B) Call team")
+	}
+	if len(input.calls) != 0 {
+		t.Fatalf("calls = %v, want none", input.calls)
+	}
+}
+
+// A skipped priority phase consumes no pipe line: the context line is the
+// next line after the task.
+func TestRunGuidedSkipsPriorityLineInProtocol(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("(B) fix @home\n@phone\n+gtdo\ndue:tomorrow\n\n"))}
+	got, err := runGuided(input, addCandidates{Contexts: []string{"@phone"}, Projects: []string{"+gtdo"}}, addOptions{Mode: addModeGuided})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "(B) fix @home @phone +gtdo due:tomorrow" {
+		t.Fatalf("got %q, want %q", got, "(B) fix @home @phone +gtdo due:tomorrow")
+	}
+}
+
 func TestComposeGuidedTaskSkipsDuplicateSigilsAndEmptyGroups(t *testing.T) {
 	tests := []struct {
 		name                         string
-		base                         string
-		metadata, projects, contexts []string
+		base, priority               string
+		contexts, projects, metadata []string
 		want                         string
 	}{
 		{
 			name:     "groups separated by one space",
 			base:     "Call team",
-			metadata: []string{"due:tomorrow", "status:open"},
-			projects: []string{"+gtdo"},
+			priority: "A",
 			contexts: []string{"@home"},
-			want:     "Call team due:tomorrow status:open +gtdo @home",
+			projects: []string{"+gtdo"},
+			metadata: []string{"due:tomorrow", "status:open"},
+			want:     "(A) Call team @home +gtdo due:tomorrow status:open",
 		},
 		{
-			name:     "empty base and groups",
+			name:     "lowercase priority uppercased",
+			base:     "Call team",
+			priority: "b",
+			want:     "(B) Call team",
+		},
+		{
+			name:     "empty base with priority",
+			priority: "A",
 			metadata: []string{"due:tomorrow"},
 			projects: []string{"+gtdo"},
-			want:     "due:tomorrow +gtdo",
+			want:     "(A) +gtdo due:tomorrow",
 		},
 		{
 			name:     "duplicate sigils",
 			base:     "Call team +gtdo @home",
-			projects: []string{"+gtdo", "+other"},
 			contexts: []string{"@home", "@phone"},
-			want:     "Call team +gtdo @home +other @phone",
+			projects: []string{"+gtdo", "+other"},
+			want:     "Call team +gtdo @home @phone +other",
 		},
 		{
-			name:     "empty selections",
-			base:     "Call team",
-			metadata: []string{},
-			projects: []string{},
-			contexts: []string{},
-			want:     "Call team",
+			name: "empty selections",
+			base: "Call team",
+			want: "Call team",
 		},
 		{
 			name:     "sigils sorted before composition",
 			base:     "Call team",
 			projects: []string{"+z", "+a"},
 			contexts: []string{"@z", "@a"},
-			want:     "Call team +a +z @a @z",
+			want:     "Call team @a @z +a +z",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := composeGuidedTask(tc.base, tc.metadata, tc.projects, tc.contexts); got != tc.want {
+			if got := composeGuidedTask(tc.base, tc.priority, tc.contexts, tc.projects, tc.metadata); got != tc.want {
 				t.Fatalf("composeGuidedTask() = %q, want %q", got, tc.want)
 			}
 		})
@@ -143,7 +202,7 @@ func TestComposeGuidedTaskSkipsDuplicateSigilsAndEmptyGroups(t *testing.T) {
 }
 
 func TestLineAddInputReadsTaskAndSelections(t *testing.T) {
-	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\ndue:tomorrow\nstatus:open\n\n+gtdo +missing\n@home @missing\n"))}
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\nA\n@home @missing\n+gtdo +missing\ndue:tomorrow\nstatus:open\n\n"))}
 	candidates := addCandidates{Projects: []string{"+gtdo"}, Contexts: []string{"@home"}}
 
 	task, err := input.PromptTask(candidates)
@@ -153,19 +212,12 @@ func TestLineAddInputReadsTaskAndSelections(t *testing.T) {
 	if task != "Call team" {
 		t.Fatalf("task = %q, want Call team", task)
 	}
-	metadata, err := input.PromptMetadata(candidates)
+	priority, err := input.PromptPriority(candidates)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(metadata, []string{"due:tomorrow", "status:open"}) {
-		t.Fatalf("metadata = %v, want due/status", metadata)
-	}
-	projects, err := input.Select(phaseProject, candidates.Projects)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(projects, []string{"+gtdo"}) {
-		t.Fatalf("projects = %v, want [+gtdo]", projects)
+	if priority != "A" {
+		t.Fatalf("priority = %q, want A", priority)
 	}
 	contexts, err := input.Select(phaseContext, candidates.Contexts)
 	if err != nil {
@@ -174,21 +226,35 @@ func TestLineAddInputReadsTaskAndSelections(t *testing.T) {
 	if !reflect.DeepEqual(contexts, []string{"@home"}) {
 		t.Fatalf("contexts = %v, want [@home]", contexts)
 	}
-}
-
-func TestLineAddInputTreatsEmptyLinesAsEmptySelections(t *testing.T) {
-	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\n\n\n\n"))}
-	candidates := addCandidates{}
-
-	if _, err := input.PromptTask(candidates); err != nil {
+	projects, err := input.Select(phaseProject, candidates.Projects)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(projects, []string{"+gtdo"}) {
+		t.Fatalf("projects = %v, want [+gtdo]", projects)
 	}
 	metadata, err := input.PromptMetadata(candidates)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(metadata) != 0 {
-		t.Fatalf("metadata = %v, want empty", metadata)
+	if !reflect.DeepEqual(metadata, []string{"due:tomorrow", "status:open"}) {
+		t.Fatalf("metadata = %v, want due/status", metadata)
+	}
+}
+
+func TestLineAddInputTreatsEmptyLinesAsEmptySelections(t *testing.T) {
+	input := lineAddInput{reader: bufio.NewReader(strings.NewReader("Call team\n\n\n\n\n"))}
+	candidates := addCandidates{}
+
+	if _, err := input.PromptTask(candidates); err != nil {
+		t.Fatal(err)
+	}
+	priority, err := input.PromptPriority(candidates)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if priority != "" {
+		t.Fatalf("priority = %q, want empty", priority)
 	}
 	for _, phase := range []guidedPhase{phaseProject, phaseContext} {
 		selected, err := input.Select(phase, nil)
@@ -198,6 +264,13 @@ func TestLineAddInputTreatsEmptyLinesAsEmptySelections(t *testing.T) {
 		if len(selected) != 0 {
 			t.Fatalf("%s selection = %v, want empty", phase, selected)
 		}
+	}
+	metadata, err := input.PromptMetadata(candidates)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(metadata) != 0 {
+		t.Fatalf("metadata = %v, want empty", metadata)
 	}
 }
 

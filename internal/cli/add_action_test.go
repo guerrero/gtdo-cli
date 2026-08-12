@@ -26,7 +26,7 @@ func TestActionAddGuidedUsesStoreOnce(t *testing.T) {
 		Verbose:    1,
 	}
 	cmd := &cobra.Command{}
-	cmd.SetIn(strings.NewReader("Call team\n\n\n\n"))
+	cmd.SetIn(strings.NewReader("Call team\n\n\n\n\n"))
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)

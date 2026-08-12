@@ -20,10 +20,24 @@ cmp stderr empty.want
 cmp todo.txt context-only.todo.want
 cmp done.txt done.want
 
+stdin priority-only.in
+exec gtdo add -g --only priority
+cmp stdout priority-only.want
+cmp stderr empty.want
+cmp todo.txt priority-only.todo.want
+cmp done.txt done.want
+
+stdin existing-priority.in
+exec gtdo add -g
+cmp stdout existing-priority.want
+cmp stderr empty.want
+cmp todo.txt existing-priority.todo.want
+cmp done.txt done.want
+
 ! exec status1 gtdo add -i extra text
 cmp stdout empty.want
 cmp stderr invalid.stderr.want
-cmp todo.txt context-only.todo.want
+cmp todo.txt existing-priority.todo.want
 cmp done.txt done.want
 
 -- todo.txt --
@@ -36,13 +50,23 @@ report @ignored +ignored
 follow up @phone +legacy
 -- guided.in --
 review current @home
+A
+@home @phone @ignored
++gtdo +legacy
 due:tomorrow
 
-+gtdo +legacy
-@home @phone @ignored
 -- context-only.in --
 quick check @home
 @home @phone @ignored
+-- priority-only.in --
+ship the release
+b
+-- existing-priority.in --
+(B) urgent fix @home
+@phone
++gtdo
+due:tomorrow
+
 -- interactive.want --
 2 follow up @phone +legacy
 TODO: 2 added.
@@ -50,20 +74,39 @@ TODO: 2 added.
 current @home +gtdo due:today
 follow up @phone +legacy
 -- guided.want --
-3 review current @home due:tomorrow +gtdo +legacy @phone
+3 (A) review current @home @phone +gtdo +legacy due:tomorrow
 TODO: 3 added.
 -- guided.todo.want --
 current @home +gtdo due:today
 follow up @phone +legacy
-review current @home due:tomorrow +gtdo +legacy @phone
+(A) review current @home @phone +gtdo +legacy due:tomorrow
 -- context-only.want --
 4 quick check @home @phone
 TODO: 4 added.
 -- context-only.todo.want --
 current @home +gtdo due:today
 follow up @phone +legacy
-review current @home due:tomorrow +gtdo +legacy @phone
+(A) review current @home @phone +gtdo +legacy due:tomorrow
 quick check @home @phone
+-- priority-only.want --
+5 (B) ship the release
+TODO: 5 added.
+-- priority-only.todo.want --
+current @home +gtdo due:today
+follow up @phone +legacy
+(A) review current @home @phone +gtdo +legacy due:tomorrow
+quick check @home @phone
+(B) ship the release
+-- existing-priority.want --
+6 (B) urgent fix @home @phone +gtdo due:tomorrow
+TODO: 6 added.
+-- existing-priority.todo.want --
+current @home +gtdo due:today
+follow up @phone +legacy
+(A) review current @home @phone +gtdo +legacy due:tomorrow
+quick check @home @phone
+(B) ship the release
+(B) urgent fix @home @phone +gtdo due:tomorrow
 -- done.want --
 old @phone +legacy status:done
 -- invalid.stderr.want --
