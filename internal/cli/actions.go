@@ -35,7 +35,7 @@ func registerActions(root *cobra.Command, cfg *config.Config) {
 		use:     `add "THING I NEED TO DO +project @context"`,
 		aliases: []string{"a"},
 		short:   "Add a TODO item to todo.txt.",
-		long:    "Adds THING I NEED TO DO to your todo.txt file on its own line.\nProject and context notation optional.\nQuotes optional.\nInteractive modes: -i|--interactive adds one editable task; -g|--guided runs metadata, project, and context phases.\nGuided mode accepts repeatable --only metadata|project|context.",
+		long:    "Adds THING I NEED TO DO to your todo.txt file on its own line.\nProject and context notation optional.\nQuotes optional.\nInteractive modes: -i|--interactive adds one editable task; -g|--guided runs priority, context, project, and metadata phases.\nGuided mode accepts repeatable --only priority|context|project|metadata.",
 		run:     actionAdd,
 	})
 	add(actionSpec{

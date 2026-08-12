@@ -67,5 +67,5 @@ quick check @home @phone
 -- done.want --
 old @phone +legacy status:done
 -- invalid.stderr.want --
-usage: gtdo add [-i|--interactive|-g|--guided] [--only metadata|project|context]
+usage: gtdo add [-i|--interactive|-g|--guided] [--only priority|context|project|metadata]
 -- empty.want --

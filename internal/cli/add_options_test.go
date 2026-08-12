@@ -20,6 +20,7 @@ func TestParseAddOptions(t *testing.T) {
 		{name: "interactive shorthand", args: []string{"-i"}, mode: addModeInteractive},
 		{name: "interactive long", args: []string{"--interactive"}, mode: addModeInteractive},
 		{name: "guided shorthand", args: []string{"-g"}, mode: addModeGuided},
+		{name: "guided priority only", args: []string{"-g", "--only", "priority"}, mode: addModeGuided, only: []guidedPhase{phasePriority}},
 		{name: "guided long repeatable phases", args: []string{"--guided", "--only", "project", "--only=context"}, mode: addModeGuided, only: []guidedPhase{phaseProject, phaseContext}},
 		{name: "mode with text", args: []string{"-g", "task"}, wantErr: true},
 		{name: "only without guided", args: []string{"--only", "context"}, wantErr: true},
@@ -49,7 +50,7 @@ func TestParseAddOptions(t *testing.T) {
 			if !reflect.DeepEqual(got.Positional, tc.text) {
 				t.Errorf("positional = %q, want %q", got.Positional, tc.text)
 			}
-			for _, phase := range []guidedPhase{phaseMetadata, phaseProject, phaseContext} {
+			for _, phase := range []guidedPhase{phasePriority, phaseMetadata, phaseProject, phaseContext} {
 				want := false
 				for _, selected := range tc.only {
 					if selected == phase {
@@ -72,6 +73,7 @@ func TestAddOptionsPhaseEnabled(t *testing.T) {
 		phase guidedPhase
 		want  bool
 	}{
+		{name: "empty selection enables priority", phase: phasePriority, want: true},
 		{name: "empty selection enables metadata", phase: phaseMetadata, want: true},
 		{name: "empty selection enables project", phase: phaseProject, want: true},
 		{name: "empty selection enables context", phase: phaseContext, want: true},
@@ -91,7 +93,7 @@ func TestAddOptionsPhaseEnabled(t *testing.T) {
 
 func TestAddUsage(t *testing.T) {
 	usage := addUsage()
-	for _, name := range []string{"-i", "--interactive", "-g", "--guided", "--only"} {
+	for _, name := range []string{"-i", "--interactive", "-g", "--guided", "--only", "priority|context|project|metadata"} {
 		if !strings.Contains(usage, name) {
 			t.Errorf("addUsage() = %q, missing %q", usage, name)
 		}

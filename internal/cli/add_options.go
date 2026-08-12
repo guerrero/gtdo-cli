@@ -19,9 +19,10 @@ const (
 type guidedPhase string
 
 const (
-	phaseMetadata guidedPhase = "metadata"
-	phaseProject  guidedPhase = "project"
+	phasePriority guidedPhase = "priority"
 	phaseContext  guidedPhase = "context"
+	phaseProject  guidedPhase = "project"
+	phaseMetadata guidedPhase = "metadata"
 )
 
 // addOptions contains the action-local options consumed by add. Positional
@@ -94,7 +95,7 @@ func parseAddOptions(args []string) (addOptions, error) {
 func parseGuidedPhase(value string) (guidedPhase, error) {
 	phase := guidedPhase(value)
 	switch phase {
-	case phaseMetadata, phaseProject, phaseContext:
+	case phasePriority, phaseContext, phaseProject, phaseMetadata:
 		return phase, nil
 	default:
 		if value == "" {
@@ -118,7 +119,7 @@ func (o addOptions) phaseEnabled(phase guidedPhase) bool {
 
 func isGuidedPhase(phase guidedPhase) bool {
 	switch phase {
-	case phaseMetadata, phaseProject, phaseContext:
+	case phasePriority, phaseContext, phaseProject, phaseMetadata:
 		return true
 	default:
 		return false
@@ -127,5 +128,5 @@ func isGuidedPhase(phase guidedPhase) bool {
 
 // addUsage describes add's action-local mode options for usage failures.
 func addUsage() string {
-	return fmt.Sprintf("usage: %s add [-i|--interactive|-g|--guided] [--only metadata|project|context]", ProgName)
+	return fmt.Sprintf("usage: %s add [-i|--interactive|-g|--guided] [--only priority|context|project|metadata]", ProgName)
 }
